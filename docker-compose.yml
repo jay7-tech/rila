@@ -2,6 +2,8 @@ version: '3.8'
 
 services:
   db:
+    # WARNING: Port 5432 and default plaintext passwords are exposed for LOCAL DEV ONLY.
+    # DO NOT use this configuration as-is in production.
     image: postgis/postgis:15-3.3
     container_name: rila_db
     environment:
