@@ -51,6 +51,9 @@ def run_test():
             print("No places extracted.")
         else:
             for idx, place in enumerate(extracted_info.places, 1):
+                if not place.place_name:
+                    print(f"\nPlace {idx}: Skipped (null/empty place_name)")
+                    continue
                 print(f"\nPlace {idx}: {place.place_name} ({place.city})")
                 if place.place_name and place.city:
                     coords = geocode_place(place.place_name, place.city)

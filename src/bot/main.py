@@ -54,6 +54,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         db = SessionLocal()
         try:
             for place in extracted_info.places:
+                if not place.place_name:
+                    logger.debug(f"Skipping place with null/empty place_name: {place}")
+                    continue
                 lat, lon = None, None
                 if place.place_name and place.city:
                     coords = await asyncio.to_thread(geocode_place, place.place_name, place.city)
