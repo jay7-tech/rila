@@ -9,7 +9,7 @@ sqlalchemy==2.0.30
 geoalchemy2==0.15.1
 psycopg2-binary==2.9.9
 sentence-transformers==3.0.1
-chromadb==0.5.0
+chromadb
 rapidfuzz==3.9.3
 apscheduler==3.10.4
 groq
