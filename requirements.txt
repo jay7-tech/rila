@@ -13,5 +13,6 @@ chromadb==0.5.0
 rapidfuzz==3.9.3
 apscheduler==3.10.4
 groq
+httpx<0.28.0
 python-dotenv==1.0.1
 numpy<2.0.0
