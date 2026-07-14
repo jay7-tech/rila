@@ -1,6 +1,7 @@
 import time
 import requests
 from typing import Optional, Tuple
+from rapidfuzz import fuzz
 
 def geocode_place(place_name: str, city: str) -> Optional[Tuple[float, float]]:
     """
@@ -31,8 +32,21 @@ def geocode_place(place_name: str, city: str) -> Optional[Tuple[float, float]]:
         data = response.json()
         
         if data and len(data) > 0:
-            lat = float(data[0]["lat"])
-            lon = float(data[0]["lon"])
+            result = data[0]
+            display_name = result.get("display_name", "")
+            
+            # Fuzzy match place_name against display_name
+            # token_set_ratio is good for subset matching
+            score = fuzz.token_set_ratio(place_name.lower(), display_name.lower())
+            
+            if score < 60:
+                print(f"  [Geocode] Rejected '{place_name}' -> '{display_name}' (Score: {score} < 60)")
+                return None
+                
+            print(f"  [Geocode] Accepted '{place_name}' -> '{display_name}' (Score: {score})")
+            
+            lat = float(result["lat"])
+            lon = float(result["lon"])
             return lat, lon
     except Exception as e:
         print(f"Geocoding failed for '{query}': {e}")
