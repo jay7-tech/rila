@@ -7,3 +7,4 @@ venv/
 *.mp3
 *.txt
 !requirements.txt
+chroma_db/
