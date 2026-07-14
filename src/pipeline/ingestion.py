@@ -2,6 +2,8 @@ import os
 import glob
 import tempfile
 import ffmpeg
+import re
+import html
 from yt_dlp import YoutubeDL
 from faster_whisper import WhisperModel
 
@@ -15,16 +17,56 @@ def download_reel(url: str, output_dir: str):
         'format': 'best',
         'quiet': True,
         'no_warnings': True,
+        'writesubtitles': True,
+        'writeautomaticsub': True,
+        'subtitleslangs': ['en'],
+        'subtitlesformat': 'vtt',
     }
     with YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
         caption = info_dict.get('description', '')
-        # Get the downloaded file path
-        # It's possible the extension is mp4 or something else
+        
         video_id = info_dict.get('id')
         video_ext = info_dict.get('ext')
         video_path = os.path.join(output_dir, f"{video_id}.{video_ext}")
-        return video_path, caption
+        
+        # Check for subtitles
+        sub_path = None
+        for file in glob.glob(os.path.join(output_dir, f"{video_id}*.vtt")):
+            sub_path = file
+            break
+            
+        return video_path, caption, sub_path
+
+def parse_vtt(vtt_path: str) -> str:
+    """Parses a VTT file, removing timestamps and deduplicating overlapping lines."""
+    with open(vtt_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+        
+    cleaned_lines = []
+    # match timestamps like 00:00:00.000 --> 00:00:02.000
+    timestamp_pattern = re.compile(r'^\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}')
+    tag_pattern = re.compile(r'<[^>]+>')
+    
+    for line in lines:
+        line = line.strip()
+        if not line or line.upper() == 'WEBVTT' or line.startswith('Kind:') or line.startswith('Language:') or line.startswith('Style:'):
+            continue
+        if timestamp_pattern.match(line):
+            continue
+        
+        # remove tags and alignment info occasionally added to cue text
+        line = html.unescape(line)
+        line = tag_pattern.sub('', line)
+        line = line.replace('align:start position:0%', '')
+        line = line.strip()
+        
+        if line:
+            # Deduplicate consecutive identical lines
+            if not cleaned_lines or cleaned_lines[-1] != line:
+                cleaned_lines.append(line)
+                
+    return " ".join(cleaned_lines)
 
 def extract_keyframes(video_path: str, output_dir: str):
     """
@@ -72,7 +114,7 @@ def process_reel(url: str):
     with tempfile.TemporaryDirectory() as temp_dir:
         print(f"Downloading {url} to {temp_dir}...")
         try:
-            video_path, caption = download_reel(url, temp_dir)
+            video_path, caption, sub_path = download_reel(url, temp_dir)
         except Exception as e:
             print(f"Failed to download {url}: {e}")
             return None, None
@@ -80,11 +122,20 @@ def process_reel(url: str):
         print("Extracting keyframes...")
         extract_keyframes(video_path, temp_dir)
         
-        print("Transcribing audio...")
-        try:
-            transcript = transcribe_audio(video_path)
-        except Exception as e:
-            print(f"Failed to transcribe {url}: {e}")
-            transcript = ""
+        if sub_path and os.path.exists(sub_path):
+            print("Transcript source: YouTube captions")
+            try:
+                transcript = parse_vtt(sub_path)
+            except Exception as e:
+                print(f"Failed to parse VTT {sub_path}: {e}")
+                transcript = ""
+        else:
+            print("Transcript source: Whisper (no captions available)")
+            print("Transcribing audio...")
+            try:
+                transcript = transcribe_audio(video_path)
+            except Exception as e:
+                print(f"Failed to transcribe {url}: {e}")
+                transcript = ""
             
         return caption, transcript

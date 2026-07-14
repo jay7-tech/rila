@@ -4,6 +4,9 @@ from pydantic import BaseModel, ValidationError
 from typing import Optional, Literal, List
 from datetime import date
 from groq import Groq
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SinglePlace(BaseModel):
     place_name: Optional[str]
@@ -82,18 +85,49 @@ def extract_place_info(caption: str, transcript: str) -> Optional[ExtractedPlace
     if not response_text:
         return None
         
+    extracted = None
     try:
         data = json.loads(response_text)
-        return ExtractedPlaces(**data)
+        extracted = ExtractedPlaces(**data)
     except (json.JSONDecodeError, ValidationError) as e:
         print(f"Extraction attempt 1 failed validation: {e}")
         # Retry once
         response_text_retry = call_llm(str(e))
-        if not response_text_retry:
-            return None
-        try:
-            data_retry = json.loads(response_text_retry)
-            return ExtractedPlaces(**data_retry)
-        except (json.JSONDecodeError, ValidationError) as e2:
-            print(f"Extraction attempt 2 also failed: {e2}")
-            return None
+        if response_text_retry:
+            try:
+                data_retry = json.loads(response_text_retry)
+                extracted = ExtractedPlaces(**data_retry)
+            except (json.JSONDecodeError, ValidationError) as e2:
+                print(f"Extraction attempt 2 also failed: {e2}")
+    
+    if extracted:
+        # Post-extraction filter
+        kept_places = []
+        stoplist = {"copper", "cry"}
+        for place in extracted.places:
+            p_name = (place.place_name or "").strip()
+            p_city = (place.city or "").strip()
+            
+            drop_reason = None
+            if place.confidence < 0.75:
+                drop_reason = f"confidence {place.confidence} < 0.75"
+            elif not p_city or p_city.lower() == "unknown":
+                drop_reason = f"invalid city '{p_city}'"
+            elif p_name:
+                words = p_name.split()
+                if len(words) == 1:
+                    w = p_name.lower()
+                    if w in stoplist:
+                        drop_reason = f"single-word stoplist match '{p_name}'"
+                    elif p_name.islower():
+                        drop_reason = f"single lowercase word '{p_name}'"
+            
+            if drop_reason:
+                logger.debug(f"[Filter] Dropped '{p_name}' in '{p_city}' (conf: {place.confidence:.2f}). Reason: {drop_reason}")
+            else:
+                logger.info(f"[Filter] Kept '{p_name}' in '{p_city}' (conf: {place.confidence:.2f})")
+                kept_places.append(place)
+                
+        extracted.places = kept_places
+        
+    return extracted
