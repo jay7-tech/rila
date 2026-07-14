@@ -3,6 +3,7 @@ import os
 import re
 import asyncio
 import uuid
+import traceback
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -54,6 +55,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             
         db = SessionLocal()
         try:
+            saved_count = 0
             for place in extracted_info.places:
                 if not place.place_name:
                     logger.debug(f"Skipping place with null/empty place_name: {place}")
@@ -112,9 +114,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     reply_text = f"✅ Saved: {place.place_name or 'Unknown'} in {place.city or 'Unknown'}.\n(No map pin: geocoding failed, but data is saved!)"
                     
                 await update.message.reply_text(reply_text)
+                saved_count += 1
+                
+            if saved_count == 0:
+                await update.message.reply_text("Could not extract any valid places with names from this reel.")
+                
                 
         except Exception as e:
             logger.error(f"Error saving to db: {e}")
+            logger.error(traceback.format_exc())
             db.rollback()
             await update.message.reply_text("An error occurred while saving the places.")
         finally:
