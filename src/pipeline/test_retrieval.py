@@ -44,6 +44,19 @@ def run_test():
             db.add(p)
         db.commit()
         
+        # Insert into Chroma DB
+        for p in fake_places:
+            text_to_embed = f"{p.place_name} {p.city} {p.category} {p.transcript}"
+            vector = embedding_model.encode(text_to_embed)
+            vector_id = str(uuid.uuid4())
+            chroma_collection.add(
+                ids=[vector_id],
+                embeddings=[vector.tolist()],
+                metadatas=[{"place_id": p.id, "place_name": p.place_name, "city": p.city}]
+            )
+            db.add(Embedding(place_id=p.id, vector_id=vector_id))
+        db.commit()
+        
         print("\n--- TEST: /nearby (PostGIS ST_DWithin) ---")
         print(f"Test Location: Times Square ({test_lat}, {test_lon})")
         print("Querying places within 2km...")
@@ -93,6 +106,14 @@ def run_test():
                         
     finally:
         # Cleanup fake places
+        fake_ids = [p.id for p in fake_places if p.id]
+        if fake_ids:
+            embeddings_records = db.query(Embedding).filter(Embedding.place_id.in_(fake_ids)).all()
+            vector_ids = [e.vector_id for e in embeddings_records]
+            if vector_ids:
+                chroma_collection.delete(ids=vector_ids)
+            db.query(Embedding).filter(Embedding.place_id.in_(fake_ids)).delete(synchronize_session=False)
+        
         db.query(Place).filter(Place.source_url.like("test_url_%")).delete(synchronize_session=False)
         db.commit()
         db.close()
