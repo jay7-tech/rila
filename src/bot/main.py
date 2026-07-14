@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from src.pipeline.ingestion import process_reel
 from src.pipeline.extraction import extract_place_info
 from src.pipeline.geocoding import geocode_place
-from src.db.database import SessionLocal, Place, Embedding, compute_embedding, chroma_collection
+from src.db.database import SessionLocal, Place, Embedding, compute_embedding, chroma_collection, embedding_model
+from sqlalchemy import func
 
 # Enable logging
 logging.basicConfig(
@@ -121,6 +122,118 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await update.message.reply_text("Please send an Instagram reel link.")
 
+async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle shared location pins for /nearby functionality."""
+    user_location = update.message.location
+    lat = user_location.latitude
+    lon = user_location.longitude
+    
+    db = SessionLocal()
+    try:
+        if db.query(Place).count() == 0:
+            await update.message.reply_text("You haven't saved anything yet.")
+            return
+
+        point_wkt = f"SRID=4326;POINT({lon} {lat})"
+        
+        results = db.query(
+            Place,
+            func.ST_Distance(Place.location, point_wkt).label("distance"),
+            func.ST_AsText(Place.location).label("wkt")
+        ).filter(
+            func.ST_DWithin(Place.location, point_wkt, 2000)
+        ).order_by("distance").limit(10).all()
+        
+        if not results:
+            await update.message.reply_text("No saved places within 2km of your location.")
+            return
+            
+        reply_lines = ["📍 Places within 2km:"]
+        for place, dist, wkt in results:
+            dist_text = f"{dist:.0f}m away" if dist < 1000 else f"{(dist/1000):.1f}km away"
+            link = "no pin available"
+            if wkt:
+                lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
+                if len(lon_lat) == 2:
+                    p_lon, p_lat = lon_lat
+                    link = f"https://www.google.com/maps?q={p_lat},{p_lon}"
+                    
+            reply_lines.append(f"- {place.place_name} ({place.city}, {place.category}) - {dist_text}\n  {link}")
+            
+        await update.message.reply_text("\n\n".join(reply_lines))
+    except Exception as e:
+        logger.error(f"Error in handle_location: {e}")
+        await update.message.reply_text("An error occurred while finding nearby places.")
+    finally:
+        db.close()
+
+async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /search command for semantic search."""
+    if not context.args:
+        await update.message.reply_text("Please provide a search query. Example: /search sushi")
+        return
+        
+    query_text = " ".join(context.args)
+    
+    db = SessionLocal()
+    try:
+        if db.query(Place).count() == 0:
+            await update.message.reply_text("You haven't saved anything yet.")
+            return
+            
+        vector = await asyncio.to_thread(embedding_model.encode, query_text)
+        
+        chroma_results = chroma_collection.query(
+            query_embeddings=[vector.tolist()],
+            n_results=5
+        )
+        
+        if not chroma_results['ids'] or not chroma_results['ids'][0]:
+            await update.message.reply_text("No matching places found.")
+            return
+            
+        vector_ids = chroma_results['ids'][0]
+        
+        embeddings_records = db.query(Embedding).filter(Embedding.vector_id.in_(vector_ids)).all()
+        place_ids = [e.place_id for e in embeddings_records]
+        
+        if not place_ids:
+            await update.message.reply_text("No matching places found in database.")
+            return
+            
+        places = db.query(
+            Place, 
+            func.ST_AsText(Place.location).label("wkt")
+        ).filter(Place.id.in_(place_ids)).all()
+        
+        place_dict = {p.Place.id: p for p in places}
+        
+        reply_lines = [f"🔍 Top results for '{query_text}':"]
+        for p_id in place_ids:
+            if p_id in place_dict:
+                row = place_dict[p_id]
+                p = row.Place
+                wkt = row.wkt
+                
+                deal_text = f"\n  Deal: {p.deal_description}" if p.deal_description else ""
+                
+                maps_link = "no pin available"
+                if wkt:
+                    lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
+                    if len(lon_lat) == 2:
+                        p_lon, p_lat = lon_lat
+                        maps_link = f"https://www.google.com/maps?q={p_lat},{p_lon}"
+                        
+                reply_lines.append(f"- {p.place_name} ({p.city}, {p.category}){deal_text}\n  Map: {maps_link}")
+                
+        await update.message.reply_text("\n\n".join(reply_lines))
+        
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        await update.message.reply_text("An error occurred during search.")
+    finally:
+        db.close()
+
 def main() -> None:
     """Start the bot."""
     bot_token = os.getenv("BOT_TOKEN")
@@ -133,6 +246,10 @@ def main() -> None:
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("search", handle_search))
+    
+    # Handle shared location pins for nearby
+    application.add_handler(MessageHandler(filters.LOCATION, handle_location))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
