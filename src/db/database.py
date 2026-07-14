@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Bool
 from sqlalchemy.orm import declarative_base, sessionmaker
 # pyrefly: ignore [missing-import]
 from geoalchemy2 import Geography
+# pyrefly: ignore [missing-import]
 import chromadb
 from sentence_transformers import SentenceTransformer
 
