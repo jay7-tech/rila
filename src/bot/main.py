@@ -46,6 +46,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message if it contains a URL, for now."""
+    allowed_id_str = os.environ.get("ALLOWED_USER_ID")
+    if allowed_id_str and update.effective_user.id != int(allowed_id_str):
+        await update.message.reply_text("This bot is private.")
+        return
+
     text = update.message.text
     
     # Simple URL regex
@@ -199,13 +204,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle shared location pins for /nearby functionality."""
+    allowed_id_str = os.environ.get("ALLOWED_USER_ID")
+    if allowed_id_str and update.effective_user.id != int(allowed_id_str):
+        await update.message.reply_text("This bot is private.")
+        return
+
     user_location = update.message.location
     lat = user_location.latitude
     lon = user_location.longitude
     
     db = SessionLocal()
     try:
-        if db.query(Place).count() == 0:
+        if db.query(Place).filter(Place.user_id == update.effective_user.id).count() == 0:
             await update.message.reply_text("You haven't saved anything yet.")
             return
 
@@ -216,7 +226,8 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             func.ST_Distance(Place.location, point_wkt).label("distance"),
             func.ST_AsText(Place.location).label("wkt")
         ).filter(
-            Place.location.is_not(None)
+            Place.location.is_not(None),
+            Place.user_id == update.effective_user.id
         ).order_by("distance").limit(5).all()
         
         if not results:
@@ -250,6 +261,11 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /search command for semantic search."""
+    allowed_id_str = os.environ.get("ALLOWED_USER_ID")
+    if allowed_id_str and update.effective_user.id != int(allowed_id_str):
+        await update.message.reply_text("This bot is private.")
+        return
+
     if not context.args:
         await update.message.reply_text("Please provide a search query. Example: /search sushi")
         return
@@ -258,7 +274,7 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     
     db = SessionLocal()
     try:
-        if db.query(Place).count() == 0:
+        if db.query(Place).filter(Place.user_id == update.effective_user.id).count() == 0:
             await update.message.reply_text("You haven't saved anything yet.")
             return
             
@@ -285,7 +301,10 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         places = db.query(
             Place, 
             func.ST_AsText(Place.location).label("wkt")
-        ).filter(Place.id.in_(place_ids)).all()
+        ).filter(
+            Place.id.in_(place_ids),
+            Place.user_id == update.effective_user.id
+        ).all()
         
         place_dict = {p.Place.id: p for p in places}
         
