@@ -29,6 +29,7 @@ services:
       - db
     volumes:
       - ./src:/app/src
+      - ./cookies:/app/cookies
     restart: unless-stopped
 
 volumes:
