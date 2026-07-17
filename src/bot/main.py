@@ -4,8 +4,13 @@ import re
 import asyncio
 import uuid
 import traceback
+import math
+from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from rapidfuzz import fuzz
+from yt_dlp.utils import DownloadError
+import groq
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -15,6 +20,16 @@ from src.pipeline.extraction import extract_place_info
 from src.pipeline.geocoding import geocode_place
 from src.db.database import SessionLocal, Place, Embedding, compute_embedding, chroma_collection, embedding_model
 from sqlalchemy import func
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000  # radius of Earth in meters
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 # Enable logging
 logging.basicConfig(
@@ -39,15 +54,34 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     if urls:
         url = urls[0]
+        
+        url_lower = url.lower()
+        if "youtube.com" not in url_lower and "youtu.be" not in url_lower and "instagram.com" not in url_lower:
+            await update.message.reply_text("This doesn't look like a YouTube or Instagram video link.")
+            return
+            
         await update.message.reply_text(f"Processing reel: {url}")
         
         # Run pipeline in a separate thread so we don't block the async event loop
-        caption, transcript = await asyncio.to_thread(process_reel, url)
+        try:
+            caption, transcript = await asyncio.to_thread(process_reel, url)
+        except DownloadError as e:
+            err_str = str(e).lower()
+            if "unsupported" in err_str:
+                await update.message.reply_text("This doesn't look like a YouTube or Instagram video link.")
+            else:
+                await update.message.reply_text("Couldn't access this video — it may be private, deleted, or restricted in your region.")
+            return
+            
         if caption is None and transcript is None:
             await update.message.reply_text("Failed to download or transcribe the video.")
             return
             
-        extracted_info = await asyncio.to_thread(extract_place_info, caption, transcript)
+        try:
+            extracted_info = await asyncio.to_thread(extract_place_info, caption, transcript)
+        except groq.RateLimitError:
+            await update.message.reply_text("Hit a rate limit processing this — please try again in a minute")
+            return
         
         if not extracted_info or not extracted_info.places:
             await update.message.reply_text("Could not extract any places from this reel.")
@@ -56,15 +90,48 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         db = SessionLocal()
         try:
             saved_count = 0
+            existing_places = db.query(
+                Place, 
+                func.ST_AsText(Place.location).label("wkt")
+            ).filter(Place.user_id == update.effective_user.id).all()
+            
             for place in extracted_info.places:
                 if not place.place_name:
                     logger.debug(f"Skipping place with null/empty place_name: {place}")
                     continue
+                
+                normalized_new = place.place_name.lower().strip()
+                
                 lat, lon = None, None
                 if place.place_name and place.city:
                     coords = await asyncio.to_thread(geocode_place, place.place_name, place.city)
                     if coords:
                         lat, lon = coords
+                        
+                is_duplicate = False
+                for ex_place, wkt in existing_places:
+                    if not ex_place.normalized_name: continue
+                    ratio = fuzz.ratio(ex_place.normalized_name, normalized_new)
+                    if ratio > 85:
+                        if wkt and lat is not None and lon is not None:
+                            lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
+                            if len(lon_lat) == 2:
+                                p_lon, p_lat = map(float, lon_lat)
+                                dist = haversine(lat, lon, p_lat, p_lon)
+                                if dist < 500:
+                                    is_duplicate = True
+                        else:
+                            is_duplicate = True
+                            
+                        if is_duplicate:
+                            old_date = ex_place.saved_at.strftime('%Y-%m-%d') if ex_place.saved_at else "an earlier date"
+                            ex_place.saved_at = datetime.now()
+                            db.commit()
+                            await update.message.reply_text(f"You already saved this — {place.place_name} ({place.city}), first saved on {old_date}.")
+                            break
+                            
+                if is_duplicate:
+                    continue
 
                 # Save to Postgres
                 wkt_point = f"SRID=4326;POINT({lon} {lat})" if lat is not None and lon is not None else None

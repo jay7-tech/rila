@@ -113,11 +113,7 @@ def process_reel(url: str):
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         print(f"Downloading {url} to {temp_dir}...")
-        try:
-            video_path, caption, sub_path = download_reel(url, temp_dir)
-        except Exception as e:
-            print(f"Failed to download {url}: {e}")
-            return None, None
+        video_path, caption, sub_path = download_reel(url, temp_dir)
             
         print("Extracting keyframes...")
         extract_keyframes(video_path, temp_dir)

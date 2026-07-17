@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Boolean, BigInteger, Text, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Boolean, BigInteger, Text, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 # pyrefly: ignore [missing-import]
 from geoalchemy2 import Geography
@@ -28,6 +28,7 @@ class Place(Base):
     price_hint = Column(Text)
     location = Column(Geography(geometry_type='POINT', srid=4326))
     confidence_score = Column(Float)
+    saved_at = Column(DateTime)
     visited = Column(Boolean, default=False)
     user_id = Column(BigInteger, nullable=False)
 

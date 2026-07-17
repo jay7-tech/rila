@@ -4,6 +4,7 @@ from pydantic import BaseModel, ValidationError
 from typing import Optional, Literal, List
 from datetime import date
 from groq import Groq
+import groq
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,8 @@ def extract_place_info(caption: str, transcript: str) -> Optional[ExtractedPlace
                 temperature=0.0
             )
             return chat_completion.choices[0].message.content
+        except groq.RateLimitError as e:
+            raise e
         except Exception as e:
             print(f"Groq API call failed: {e}")
             return None
