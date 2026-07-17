@@ -156,7 +156,12 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await update.message.reply_text("No saved places with known locations found.")
             return
             
-        reply_lines = ["Nearest saved places:"]
+        closest_dist = results[0][1]
+        if closest_dist > 5000:
+            reply_lines = ["Nothing nearby, but here are your closest saved places for reference:"]
+        else:
+            reply_lines = ["Nearest saved places:"]
+            
         for place, dist, wkt in results:
             dist_text = f"{dist:.0f}m away" if dist < 1000 else f"{(dist/1000):.1f}km away"
             marker = "📍 " if dist <= 2000 else ""
