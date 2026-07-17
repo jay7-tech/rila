@@ -149,16 +149,17 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             func.ST_Distance(Place.location, point_wkt).label("distance"),
             func.ST_AsText(Place.location).label("wkt")
         ).filter(
-            func.ST_DWithin(Place.location, point_wkt, 2000)
-        ).order_by("distance").limit(10).all()
+            Place.location.is_not(None)
+        ).order_by("distance").limit(5).all()
         
         if not results:
-            await update.message.reply_text("No saved places within 2km of your location.")
+            await update.message.reply_text("No saved places with known locations found.")
             return
             
-        reply_lines = ["📍 Places within 2km:"]
+        reply_lines = ["Nearest saved places:"]
         for place, dist, wkt in results:
             dist_text = f"{dist:.0f}m away" if dist < 1000 else f"{(dist/1000):.1f}km away"
+            marker = "📍 " if dist <= 2000 else ""
             link = "no pin available"
             if wkt:
                 lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
@@ -166,7 +167,7 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     p_lon, p_lat = lon_lat
                     link = f"https://www.google.com/maps?q={p_lat},{p_lon}"
                     
-            reply_lines.append(f"- {place.place_name} ({place.city}, {place.category}) - {dist_text}\n  {link}")
+            reply_lines.append(f"{marker}- {place.place_name} ({place.city}, {place.category}) - {dist_text}\n  {link}")
             
         await update.message.reply_text("\n\n".join(reply_lines))
     except Exception as e:
