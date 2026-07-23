@@ -88,8 +88,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text("Hit a rate limit processing this — please try again in a minute")
             return
         
-        if not extracted_info or not extracted_info.places:
-            await update.message.reply_text("Could not extract any places from this reel.")
+        if not extracted_info or not extracted_info.entities:
+            await update.message.reply_text("Could not extract any entities from this reel.")
             return
             
         db = SessionLocal()
@@ -100,45 +100,49 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 func.ST_AsText(Place.location).label("wkt")
             ).filter(Place.user_id == update.effective_user.id).all()
             
-            for place in extracted_info.places:
-                if not place.place_name:
-                    logger.debug(f"Skipping place with null/empty place_name: {place}")
+            for entity in extracted_info.entities:
+                if not entity.title:
+                    logger.debug(f"Skipping entity with null/empty title: {entity}")
                     continue
                 
-                normalized_new = place.place_name.lower().strip()
+                normalized_new = entity.title.lower().strip()
                 
                 lat, lon = None, None
                 geocode_status = "error"
-                if place.place_name and place.city:
-                    lat, lon, geocode_status = await asyncio.to_thread(geocode_place, place.place_name, place.city)
+                if entity.content_type == "place" and entity.title and entity.city:
+                    lat, lon, geocode_status = await asyncio.to_thread(geocode_place, entity.title, entity.city)
 
-                if geocode_status == "rejected":
+                if entity.content_type == "place" and geocode_status == "rejected":
                     logger.warning(
-                        f"Rejected likely-hallucinated place '{place.place_name}' ({place.city}) "
+                        f"Rejected likely-hallucinated place '{entity.title}' ({entity.city}) "
                         f"— no confident geocoding match found."
                     )
                     continue  # skip this entity entirely, do not save, do not notify — try the next extracted place
                         
                 is_duplicate = False
-                for ex_place, wkt in existing_places:
-                    if not ex_place.normalized_name: continue
-                    ratio = fuzz.ratio(ex_place.normalized_name, normalized_new)
+                for ex_entity, wkt in existing_places:
+                    if not ex_entity.normalized_name: continue
+                    ratio = fuzz.ratio(ex_entity.normalized_name, normalized_new)
                     if ratio > 85:
-                        if wkt and lat is not None and lon is not None:
-                            lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
-                            if len(lon_lat) == 2:
-                                p_lon, p_lat = map(float, lon_lat)
-                                dist = haversine(lat, lon, p_lat, p_lon)
-                                if dist < 500:
-                                    is_duplicate = True
+                        if entity.content_type == "place":
+                            if wkt and lat is not None and lon is not None:
+                                lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
+                                if len(lon_lat) == 2:
+                                    p_lon, p_lat = map(float, lon_lat)
+                                    dist = haversine(lat, lon, p_lat, p_lon)
+                                    if dist < 500:
+                                        is_duplicate = True
+                            else:
+                                is_duplicate = True
                         else:
                             is_duplicate = True
                             
                         if is_duplicate:
-                            old_date = ex_place.saved_at.strftime('%Y-%m-%d') if ex_place.saved_at else "an earlier date"
-                            ex_place.saved_at = datetime.now()
+                            old_date = ex_entity.saved_at.strftime('%Y-%m-%d') if ex_entity.saved_at else "an earlier date"
+                            ex_entity.saved_at = datetime.now()
                             db.commit()
-                            await update.message.reply_text(f"You already saved this — {place.place_name} ({place.city}), first saved on {old_date}.")
+                            city_str = f" in {entity.city}" if entity.city else ""
+                            await update.message.reply_text(f"You already saved this — {entity.title}{city_str}, first saved on {old_date}.")
                             break
                             
                 if is_duplicate:
@@ -151,15 +155,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     source_url=url,
                     raw_caption=caption,
                     transcript=transcript,
-                    place_name=place.place_name,
-                    normalized_name=place.place_name.lower() if place.place_name else None,
-                    city=place.city,
-                    category=place.category,
-                    deal_description=place.deal_description,
-                    deal_expiry=place.deal_expiry,
-                    price_hint=place.price_hint,
+                    content_type=entity.content_type,
+                    title=entity.title,
+                    normalized_name=entity.title.lower() if entity.title else None,
+                    city=entity.city,
+                    category=entity.category,
+                    summary=entity.summary,
+                    key_details=entity.key_details,
+                    expiry_or_deadline=entity.expiry_or_deadline,
                     location=wkt_point,
-                    confidence_score=place.confidence,
+                    confidence_score=entity.confidence,
                     user_id=update.effective_user.id
                 )
                 db.add(db_place)
@@ -169,7 +174,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 # Generate Embedding
                 vector = await asyncio.to_thread(
                     compute_embedding, 
-                    place.place_name, place.city, place.category, place.deal_description, transcript
+                    entity.content_type, entity.title, entity.city, entity.category, entity.summary, entity.key_details, transcript
                 )
                 vector_id = str(uuid.uuid4())
                 
@@ -177,7 +182,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 chroma_collection.add(
                     ids=[vector_id],
                     embeddings=[vector],
-                    metadatas=[{"place_id": db_place.id, "place_name": place.place_name or "", "city": place.city or ""}]
+                    metadatas=[{"place_id": db_place.id, "place_name": entity.title or "", "city": entity.city or ""}]
                 )
                 
                 # Link in Postgres
@@ -186,23 +191,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 db.commit()
                 
                 # Reply to user
-                if lat is not None and lon is not None:
-                    reply_text = f"📍 Found: {place.place_name} in {place.city}\nGoogle Maps: https://www.google.com/maps?q={lat},{lon}"
+                if entity.content_type == "place":
+                    if lat is not None and lon is not None:
+                        reply_text = f"📍 Found: {entity.title} in {entity.city}\nGoogle Maps: https://www.google.com/maps?q={lat},{lon}"
+                    else:
+                        reply_text = f"✅ Saved: {entity.title or 'Unknown'} in {entity.city or 'Unknown'}.\n(No map pin: not in OpenStreetMap yet, but data is saved!)"
                 else:
-                    reply_text = f"✅ Saved: {place.place_name or 'Unknown'} in {place.city or 'Unknown'}.\n(No map pin: not in OpenStreetMap yet, but data is saved!)"
+                    details = ""
+                    if entity.summary: details += f"\nSummary: {entity.summary}"
+                    if entity.key_details: details += f"\nDetails: {entity.key_details}"
+                    if entity.expiry_or_deadline: details += f"\nDeadline: {entity.expiry_or_deadline}"
+                    reply_text = f"📄 Saved: {entity.title or 'Unknown'}{details}"
                     
                 await update.message.reply_text(reply_text)
                 saved_count += 1
                 
             if saved_count == 0:
-                await update.message.reply_text("Could not extract any valid places with names from this reel.")
+                await update.message.reply_text("Could not extract any valid entities with titles from this reel.")
                 
                 
         except Exception as e:
             logger.error(f"Error saving to db: {e}")
             logger.error(traceback.format_exc())
             db.rollback()
-            await update.message.reply_text("An error occurred while saving the places.")
+            await update.message.reply_text("An error occurred while saving the entities.")
         finally:
             db.close()
     else:
@@ -256,7 +268,7 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     p_lon, p_lat = lon_lat
                     link = f"https://www.google.com/maps?q={p_lat},{p_lon}"
                     
-            reply_lines.append(f"{marker}- {place.place_name} ({place.city}, {place.category}) - {dist_text}\n  {link}")
+            reply_lines.append(f"{marker}- {place.title} ({place.city}, {place.category}) - {dist_text}\n  {link}")
             
         await update.message.reply_text("\n\n".join(reply_lines))
     except Exception as e:
@@ -292,7 +304,7 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
         
         if not chroma_results['ids'] or not chroma_results['ids'][0]:
-            await update.message.reply_text("No matching places found.")
+            await update.message.reply_text("No matching results found.")
             return
             
         vector_ids = chroma_results['ids'][0]
@@ -301,7 +313,7 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         place_ids = [e.place_id for e in embeddings_records]
         
         if not place_ids:
-            await update.message.reply_text("No matching places found in database.")
+            await update.message.reply_text("No matching results found in database.")
             return
             
         places = db.query(
@@ -321,16 +333,22 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 p = row.Place
                 wkt = row.wkt
                 
-                deal_text = f"\n  Deal: {p.deal_description}" if p.deal_description else ""
+                details = ""
+                if p.summary: details += f"\n  Summary: {p.summary}"
+                if p.key_details: details += f"\n  Details: {p.key_details}"
                 
-                maps_link = "no pin available"
-                if wkt:
-                    lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
-                    if len(lon_lat) == 2:
-                        p_lon, p_lat = lon_lat
-                        maps_link = f"https://www.google.com/maps?q={p_lat},{p_lon}"
+                maps_link = ""
+                if p.content_type == "place":
+                    link = "no pin available"
+                    if wkt:
+                        lon_lat = wkt.replace('POINT(', '').replace(')', '').split()
+                        if len(lon_lat) == 2:
+                            p_lon, p_lat = lon_lat
+                            link = f"https://www.google.com/maps?q={p_lat},{p_lon}"
+                    maps_link = f"\n  Map: {link}"
                         
-                reply_lines.append(f"- {p.place_name} ({p.city}, {p.category}){deal_text}\n  Map: {maps_link}")
+                city_str = f" in {p.city}" if p.city else ""
+                reply_lines.append(f"- {p.title}{city_str} ({p.category}){details}{maps_link}")
                 
         await update.message.reply_text("\n\n".join(reply_lines))
         

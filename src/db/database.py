@@ -1,9 +1,7 @@
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Boolean, BigInteger, Text, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
-# pyrefly: ignore [missing-import]
 from geoalchemy2 import Geography
-# pyrefly: ignore [missing-import]
 import chromadb
 from sentence_transformers import SentenceTransformer
 
@@ -19,13 +17,14 @@ class Place(Base):
     source_type = Column(Text, default="instagram_reel")
     raw_caption = Column(Text)
     transcript = Column(Text)
-    place_name = Column(Text)
+    content_type = Column(Text, default="place")
+    title = Column(Text)
     normalized_name = Column(Text)
     city = Column(Text)
     category = Column(Text)
-    deal_description = Column(Text)
-    deal_expiry = Column(Date)
-    price_hint = Column(Text)
+    summary = Column(Text)
+    key_details = Column(Text)
+    expiry_or_deadline = Column(Date)
     location = Column(Geography(geometry_type='POINT', srid=4326))
     confidence_score = Column(Float)
     saved_at = Column(DateTime)
@@ -34,30 +33,23 @@ class Place(Base):
 
 class Embedding(Base):
     __tablename__ = "embeddings"
-    # To keep it simple in SQLAlchemy without a primary key defined in schema.sql, 
-    # we can define place_id as primary_key just for ORM mapping.
     place_id = Column(Integer, ForeignKey("places.id"), primary_key=True)
     vector_id = Column(Text)
 
-# Initialize ChromaDB locally
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 chroma_collection = chroma_client.get_or_create_collection(name="rila_places")
-
-# Load sentence transformer model globally to avoid reloading
 embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-def compute_embedding(place_name: str, city: str, category: str, deal_description: str, transcript: str):
-    """
-    Computes embedding text heavily weighted towards specific place data 
-    rather than just the generic reel transcript.
-    """
-    p_name = place_name or ""
-    p_city = city or ""
-    p_cat = category or ""
-    p_deal = deal_description or ""
-    
-    # Weight specific place details at the front
-    embed_text = f"Place: {p_name}. City: {p_city}. Category: {p_cat}. Deal: {p_deal}. Context: {transcript}"
-    
+def compute_embedding(content_type: str, title: str, city: str, category: str, summary: str, key_details: str, transcript: str):
+    c_type = content_type or "place"
+    e_title = title or ""
+    e_city = city or ""
+    e_cat = category or ""
+    e_summary = summary or ""
+    e_details = key_details or ""
+    embed_text = (
+        f"Type: {c_type}. Title: {e_title}. City: {e_city}. Category: {e_cat}. "
+        f"Summary: {e_summary}. Details: {e_details}. Context: {transcript}"
+    )
     vector = embedding_model.encode(embed_text)
     return vector.tolist()

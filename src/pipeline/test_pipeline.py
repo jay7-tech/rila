@@ -47,24 +47,23 @@ def run_test():
         
         # 3. Geocoding
         print("\n--- PHASE 3: GEOCODING ---")
-        if not extracted_info.places:
-            print("No places extracted.")
+        if not extracted_info.entities:
+            print("No entities extracted.")
         else:
-            for idx, place in enumerate(extracted_info.places, 1):
-                if not place.place_name:
-                    print(f"\nPlace {idx}: Skipped (null/empty place_name)")
+            for idx, entity in enumerate(extracted_info.entities, 1):
+                if not entity.title:
+                    print(f"\nEntity {idx}: Skipped (null/empty title)")
                     continue
-                print(f"\nPlace {idx}: {place.place_name} ({place.city})")
-                if place.place_name and place.city:
-                    coords = geocode_place(place.place_name, place.city)
-                    if coords:
-                        lat, lon = coords
+                print(f"\nEntity {idx}: {entity.title} ({entity.city})")
+                if entity.title and entity.city:
+                    lat, lon, status = geocode_place(entity.title, entity.city)
+                    if status == "confirmed":
                         print(f"  Geocoded successfully: {lat}, {lon}")
                         print(f"  Google Maps Link: https://www.google.com/maps?q={lat},{lon}")
                     else:
-                        print("  Geocoding returned no results.")
+                        print(f"  Geocoding status: {status}")
                 else:
-                    print("  Missing place_name or city, skipping geocoding.")
+                    print("  Missing title or city, skipping geocoding.")
 
 if __name__ == "__main__":
     run_test()

@@ -22,19 +22,19 @@ def run_test():
         fake_places = [
             Place(
                 source_url="test_url_1", transcript="test1", category="food",
-                place_name="Fake Pizza (1km away)", city="New York",
+                title="Fake Pizza (1km away)", city="New York",
                 location=f"SRID=4326;POINT(-73.9800 40.7500)", # ~1km away
                 user_id=1
             ),
             Place(
                 source_url="test_url_2", transcript="test2", category="food",
-                place_name="Fake Sushi (500m away)", city="New York",
+                title="Fake Sushi (500m away)", city="New York",
                 location=f"SRID=4326;POINT(-73.9820 40.7540)", # ~500m away
                 user_id=1
             ),
             Place(
                 source_url="test_url_3", transcript="test3", category="food",
-                place_name="Fake Burger (3km away)", city="New York",
+                title="Fake Burger (3km away)", city="New York",
                 location=f"SRID=4326;POINT(-73.9900 40.7200)", # >2km away
                 user_id=1
             )
@@ -46,13 +46,13 @@ def run_test():
         
         # Insert into Chroma DB
         for p in fake_places:
-            text_to_embed = f"{p.place_name} {p.city} {p.category} {p.transcript}"
+            text_to_embed = f"{p.title} {p.city} {p.category} {p.transcript}"
             vector = embedding_model.encode(text_to_embed)
             vector_id = str(uuid.uuid4())
             chroma_collection.add(
                 ids=[vector_id],
                 embeddings=[vector.tolist()],
-                metadatas=[{"place_id": p.id, "place_name": p.place_name, "city": p.city}]
+                metadatas=[{"place_id": p.id, "title": p.title, "city": p.city}]
             )
             db.add(Embedding(place_id=p.id, vector_id=vector_id))
         db.commit()
@@ -74,7 +74,7 @@ def run_test():
         else:
             for place, dist, wkt in results:
                 dist_text = f"{dist:.0f}m away" if dist < 1000 else f"{(dist/1000):.1f}km away"
-                print(f" - {place.place_name} ({place.city}) - {dist_text}")
+                print(f" - {place.title} ({place.city}) - {dist_text}")
                 
         print("\n--- TEST: /search (ChromaDB + Postgres) ---")
         query_text = "sushi"
@@ -102,7 +102,7 @@ def run_test():
                 for p_id in place_ids:
                     if p_id in place_dict:
                         p = place_dict[p_id]
-                        print(f" - {p.place_name} ({p.city}, {p.category})")
+                        print(f" - {p.title} ({p.city}, {p.category})")
                         
     finally:
         # Cleanup fake places
