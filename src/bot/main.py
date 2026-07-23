@@ -108,10 +108,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 normalized_new = place.place_name.lower().strip()
                 
                 lat, lon = None, None
+                geocode_status = "error"
                 if place.place_name and place.city:
-                    coords = await asyncio.to_thread(geocode_place, place.place_name, place.city)
-                    if coords:
-                        lat, lon = coords
+                    lat, lon, geocode_status = await asyncio.to_thread(geocode_place, place.place_name, place.city)
+
+                if geocode_status == "rejected":
+                    logger.warning(
+                        f"Rejected likely-hallucinated place '{place.place_name}' ({place.city}) "
+                        f"— no confident geocoding match found."
+                    )
+                    continue  # skip this entity entirely, do not save, do not notify — try the next extracted place
                         
                 is_duplicate = False
                 for ex_place, wkt in existing_places:
@@ -183,7 +189,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if lat is not None and lon is not None:
                     reply_text = f"📍 Found: {place.place_name} in {place.city}\nGoogle Maps: https://www.google.com/maps?q={lat},{lon}"
                 else:
-                    reply_text = f"✅ Saved: {place.place_name or 'Unknown'} in {place.city or 'Unknown'}.\n(No map pin: geocoding failed, but data is saved!)"
+                    reply_text = f"✅ Saved: {place.place_name or 'Unknown'} in {place.city or 'Unknown'}.\n(No map pin: not in OpenStreetMap yet, but data is saved!)"
                     
                 await update.message.reply_text(reply_text)
                 saved_count += 1

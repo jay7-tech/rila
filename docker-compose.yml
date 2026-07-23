@@ -24,6 +24,8 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - ALLOWED_USER_ID=${ALLOWED_USER_ID}
+      - INSTAGRAM_COOKIES_PATH=${INSTAGRAM_COOKIES_PATH}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-rila}:${POSTGRES_PASSWORD:-rilapassword}@db:5432/${POSTGRES_DB:-rila}
     depends_on:
       - db
