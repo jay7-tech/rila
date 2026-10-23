@@ -1,0 +1,10 @@
+{
+  "name": "Rilla",
+  "short_name": "Rilla",
+  "description": "Offers, places and live conditions from the reels you watch, on your own map.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A1A1D",
+  "theme_color": "#0B7A83",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

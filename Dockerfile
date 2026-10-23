@@ -1,21 +1,22 @@
-# Use official Python runtime as a parent image
 FROM python:3.11-slim
 
-# Install ffmpeg for video processing
-RUN apt-get update && apt-get install -y ffmpeg libpq-dev gcc && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libpq5 nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set working directory in the container
 WORKDIR /app
-
-# Copy the requirements file into the container
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies
-# We install the CPU version of PyTorch first so it doesn't download 4GB+ of Nvidia CUDA libraries
-RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt
+COPY alembic.ini .
+COPY migrations ./migrations
+COPY app ./app
+COPY web ./web
 
-# Copy the rest of the application code
-COPY . .
+# Model caches live on the /data volume so they download once.
+ENV PYTHONUNBUFFERED=1 HF_HOME=/data/hf FASTEMBED_CACHE_PATH=/data/fastembed
+RUN useradd -m rilla && mkdir -p /data && chown rilla /data
+USER rilla
 
-# Command is specified in docker-compose.yml
+EXPOSE 8000
+ENTRYPOINT ["python", "-m", "app.main"]
+CMD ["all"]

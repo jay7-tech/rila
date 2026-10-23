@@ -1,0 +1,18 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/rilla_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Postgres with PostGIS and pgvector (same image as production)
+        run: |
+          docker build -t rilla-db ./db
+          docker run -d --name pg -p 5432:5432 -e POSTGRES_PASSWORD=test -e POSTGRES_DB=rilla_test rilla-db
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres -d rilla_test && break; sleep 2; done
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q

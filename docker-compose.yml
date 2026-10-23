@@ -1,38 +1,75 @@
-version: '3.8'
+# One image, several roles. Scale reel processing with:
+#   docker compose up -d --scale worker=3
+x-app: &app
+  build: .
+  env_file: .env
+  environment: &appenv
+    DATABASE_URL: postgresql://rilla:${POSTGRES_PASSWORD}@db:5432/rilla
+    RUN_MIGRATIONS: "0"
+  volumes:
+    - appdata:/data
+    - ./cookies:/app/cookies:ro
+  restart: unless-stopped
 
 services:
   db:
-    # WARNING: Port 5432 and default plaintext passwords are exposed for LOCAL DEV ONLY.
-    # DO NOT use this configuration as-is in production.
-    image: postgis/postgis:15-3.3
-    container_name: rila_db
+    build: ./db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-rila}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rilapassword}
-      POSTGRES_DB: ${POSTGRES_DB:-rila}
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: rilla
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: rilla
     volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rilla -d rilla"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
+    # No ports published: only the other containers can reach the database.
+
+  migrate:
+    <<: *app
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      db: {condition: service_healthy}
+
+  api:
+    <<: *app
+    command: ["api"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health',timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      migrate: {condition: service_completed_successfully}
 
   bot:
-    build: .
-    container_name: rila_bot
-    command: python src/bot/main.py
-    environment:
-      - BOT_TOKEN=${BOT_TOKEN}
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - ALLOWED_USER_ID=${ALLOWED_USER_ID}
-      - INSTAGRAM_COOKIES_PATH=${INSTAGRAM_COOKIES_PATH}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-rila}:${POSTGRES_PASSWORD:-rilapassword}@db:5432/${POSTGRES_DB:-rila}
+    <<: *app
+    command: ["bot"]
     depends_on:
-      - db
-    volumes:
-      - ./src:/app/src
-      - ./cookies:/app/cookies
+      migrate: {condition: service_completed_successfully}
+
+  worker:
+    <<: *app
+    command: ["worker"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  # Optional free public URL for testers: docker compose --profile public up -d
+  # Then read the https://....trycloudflare.com address from: docker compose logs tunnel
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://api:8000
+    profiles: ["public"]
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:
-  db_data:
+  pgdata:
+  appdata:

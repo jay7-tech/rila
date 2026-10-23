@@ -1,0 +1,19 @@
+# Local development only (Compose loads this automatically).
+# Your ./app folder is used live inside the containers, so a code change needs
+# only `docker compose restart worker` (or bot / api), not a rebuild.
+# On a server, run `docker compose -f docker-compose.yml up -d` to ignore this file.
+x-dev: &dev
+  volumes:
+    - ./app:/app/app
+    - appdata:/data
+    - ./cookies:/app/cookies:ro
+
+services:
+  api:
+    <<: *dev
+  bot:
+    <<: *dev
+  worker:
+    <<: *dev
+  migrate:
+    <<: *dev

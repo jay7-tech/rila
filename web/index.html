@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rilla</title>
+<meta name="theme-color" content="#0B7A83">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Ril<span>l</span>a</div>
+    <nav class="tabs" id="tabs" aria-label="Views"></nav>
+  </header>
+
+  <section class="card" id="add" aria-label="Add a reel">
+    <form id="addform" class="addrow">
+      <label for="url" class="sr">Reel or short link</label>
+      <input id="url" type="url" inputmode="url" placeholder="Paste an Instagram reel or YouTube short link" required>
+      <button class="cta" type="submit" id="addbtn">Save it</button>
+    </form>
+    <p class="note" id="addmsg" role="status" aria-live="polite"></p>
+  </section>
+
+  <div class="grid">
+    <div class="col" id="left"></div>
+    <div class="col">
+      <div class="mapcard" id="mapcard">
+        <div id="map" role="application" aria-label="Map of your saved items"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
