@@ -59,6 +59,8 @@ def saved_summary(summary: dict) -> str:
         parts.append(f"Added {summary['signals']} live report(s) about conditions nearby.")
     if summary.get("rejected"):
         parts.append("Skipped (could not find on the map): " + ", ".join(summary["rejected"]))
+    if summary.get("expired"):
+        parts.append("Skipped (already ended): " + ", ".join(summary["expired"]))
     if not parts:
         parts.append("I couldn't find anything specific to save in that reel.")
     parts.append("Use /near to see what is close to you.")

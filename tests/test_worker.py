@@ -64,3 +64,29 @@ def test_unexpected_error_does_not_crash_or_leak_details(session, user, monkeypa
 
 def test_empty_result_message():
     assert "couldn't find anything" in fmt.saved_summary({"saved": [], "duplicates": [], "signals": 0, "rejected": []})
+
+
+import asyncio
+
+from app.services import worker as worker_mod
+
+
+def test_notify_retries_then_succeeds():
+    calls = []
+
+    async def flaky(job, summary):
+        calls.append(1)
+        if len(calls) < 3:
+            raise RuntimeError("network")
+
+    job = type("J", (), {"id": 1, "chat_id": 5})()
+    assert asyncio.run(worker_mod.notify_with_retry(flaky, job, {}, delays=(0, 0, 0, 0))) is True
+    assert len(calls) == 3
+
+
+def test_notify_gives_up_without_raising():
+    async def down(job, summary):
+        raise RuntimeError("network")
+
+    job = type("J", (), {"id": 1, "chat_id": 5})()
+    assert asyncio.run(worker_mod.notify_with_retry(down, job, {}, delays=(0, 0))) is False

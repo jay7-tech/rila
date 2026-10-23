@@ -29,6 +29,7 @@ class ProcessResult:
     duplicates: List[Item] = field(default_factory=list)
     signals: List[Signal] = field(default_factory=list)
     rejected: List[str] = field(default_factory=list)
+    expired: List[str] = field(default_factory=list)  # offers whose window had already ended
     creator: Optional[str] = None
 
 
@@ -72,6 +73,14 @@ def process_url(
     existing = list(session.scalars(select(Item).where(Item.user_id == user.id)))
 
     for it in ex.items:
+        starts, ends = parse_start(it.starts_at), parse_dt(it.ends_at)
+        if it.kind == "place":
+            starts = ends = None  # a venue to visit does not expire; dates here are noise
+        elif ends and ends < now:
+            out.expired.append(it.title or it.venue or "item")
+            continue  # already over, not worth saving
+        if starts and ends and ends < starts:
+            starts = None  # contradictory window: trust the end date
         lat = lon = None
         geo = "none"
         where = ", ".join(x for x in (it.area, it.city) if x)
@@ -102,8 +111,8 @@ def process_url(
             summary=it.summary,
             price_text=it.price_text,
             duration_text=it.duration_text,
-            starts_at=parse_start(it.starts_at),
-            ends_at=parse_dt(it.ends_at),
+            starts_at=starts,
+            ends_at=ends,
             lat=lat,
             lon=lon,
             geo_status=geo,

@@ -6,6 +6,7 @@ use, point NOMINATIM_URL at a self-hosted instance.
 """
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
@@ -19,6 +20,7 @@ from ..models import GeoCache
 
 NOMINATIM_URL = os.environ.get("NOMINATIM_URL", "https://nominatim.openstreetmap.org/search")
 USER_AGENT = os.environ.get("NOMINATIM_USER_AGENT", "Rilla/0.1 (contact: set NOMINATIM_USER_AGENT)")
+log = logging.getLogger(__name__)
 MIN_MATCH_SCORE = 65
 MIN_GAP_SECONDS = 1.1
 
@@ -36,14 +38,26 @@ def _fetch(query: str, limit: int = 3) -> List[dict]:
         if wait > 0:
             time.sleep(wait)
         _last_call = time.monotonic()
-    resp = httpx.get(
-        NOMINATIM_URL,
-        params={"q": query, "format": "json", "limit": limit},
-        headers={"User-Agent": USER_AGENT},
-        timeout=10,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    for attempt in (1, 2):
+        resp = httpx.get(
+            NOMINATIM_URL,
+            params={"q": query, "format": "json", "limit": limit},
+            headers={"User-Agent": USER_AGENT},
+            timeout=10,
+        )
+        if resp.status_code in (429, 500, 502, 503, 504) and attempt == 1:
+            time.sleep(3)  # busy or rate limited: wait once and retry
+            continue
+        resp.raise_for_status()
+        return resp.json()
+    return []
+
+
+def _log_failure(query_text: str, err: Exception) -> None:
+    hint = ""
+    if isinstance(err, httpx.HTTPStatusError) and err.response.status_code in (403, 429):
+        hint = " (Nominatim refused: set NOMINATIM_USER_AGENT in .env to 'Rilla/0.1 (your-email)')"
+    log.warning("geocoding failed for %r: %s%s", query_text, err, hint)
 
 
 def _cache_get(session: Session, key: str) -> Optional[GeoResult]:
@@ -75,7 +89,8 @@ def geocode_place(
         return cached
     try:
         results = (fetch or _fetch)(f"{name}, {where}")
-    except Exception:
+    except Exception as e:
+        _log_failure(query_text=f"{name}, {where}", err=e)
         return None, None, "error"
     if not results:
         out: GeoResult = (None, None, "no_candidates")
@@ -104,7 +119,8 @@ def geocode_area(session: Session, where: str, fetch: Callable[[str], List[dict]
         return cached
     try:
         results = (fetch or _fetch)(where)
-    except Exception:
+    except Exception as e:
+        _log_failure(query_text=where, err=e)
         return None, None, "error"
     if not results:
         out: GeoResult = (None, None, "no_candidates")

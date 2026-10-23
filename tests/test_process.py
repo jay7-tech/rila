@@ -97,3 +97,28 @@ def test_signals_saved_with_creator_as_source_and_hint(session, user):
 
 def test_area_key_without_area_uses_city():
     assert area_key("Gokarna", None) == "gokarna|gokarna"
+
+
+def test_place_ignores_dates_so_it_never_expires(session, user):
+    # model copied the posting date into a restaurant recommendation
+    res = run(session, user, [offer(kind="place", title="Klai", venue="Klai",
+                                    starts_at="2024-09-21", ends_at="2024-09-22")])
+    session.commit()
+    item = session.scalars(select(Item)).one()
+    assert len(res.items) == 1 and item.starts_at is None and item.ends_at is None
+
+
+def test_offer_that_already_ended_is_skipped_and_reported(session, user):
+    res = run(session, user, [offer(title="Old deal", ends_at="2024-09-22")])
+    assert res.items == [] and res.expired == ["Old deal"]
+    assert session.scalars(select(Item)).first() is None
+
+
+def test_contradictory_window_keeps_end_date(session, user):
+    res = run(session, user, [offer(starts_at="2026-10-30", ends_at="2026-10-25")])
+    assert res.items[0].starts_at is None and res.items[0].ends_at == datetime(2026, 10, 25, 23, 59)
+
+
+def test_expired_is_shown_to_the_user():
+    from app.formatting import saved_summary
+    assert "Skipped (already ended): Old deal" in saved_summary({"saved": [], "duplicates": [], "expired": ["Old deal"]})

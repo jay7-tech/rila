@@ -42,3 +42,16 @@ def test_area_centre_is_approx(session):
 def test_blank_input_is_error(session):
     assert geocode_place(session, "", "x")[2] == "error"
     assert geocode_area(session, "")[2] == "error"
+
+
+def test_http_refusal_is_logged_with_a_hint(session, caplog):
+    import httpx
+    from app.services import geocode as g
+
+    def refuse(q):
+        req = httpx.Request("GET", "https://nominatim.openstreetmap.org/search")
+        raise httpx.HTTPStatusError("403", request=req, response=httpx.Response(403, request=req))
+
+    with caplog.at_level("WARNING"):
+        assert g.geocode_area(session, "Bangalore", fetch=refuse)[2] == "error"
+    assert "NOMINATIM_USER_AGENT" in caplog.text

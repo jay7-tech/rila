@@ -47,6 +47,7 @@ def summarize(result: ProcessResult) -> dict:
         "duplicates": [{"id": i.id, "title": i.title} for i in result.duplicates],
         "signals": len(result.signals),
         "rejected": result.rejected,
+        "expired": result.expired,
         "creator": result.creator,
     }
 
@@ -81,6 +82,23 @@ def run_job(session: Session, job: Job, now: Optional[datetime] = None) -> dict:
     return summary
 
 
+NOTIFY_DELAYS = (0.0, 3.0, 10.0, 30.0)
+
+
+async def notify_with_retry(notify: Notifier, job: Job, summary: dict, delays=NOTIFY_DELAYS) -> bool:
+    """Telegram or the network can blip. Retry a few times; the result is already saved either way."""
+    for attempt, delay in enumerate(delays, 1):
+        if delay:
+            await asyncio.sleep(delay)
+        try:
+            await notify(job, summary)
+            return True
+        except Exception as e:
+            log.warning("notify for job %s failed (attempt %d/%d): %s", job.id, attempt, len(delays), type(e).__name__)
+    log.error("could not notify chat %s about job %s; the items are saved (/saved)", job.chat_id, job.id)
+    return False
+
+
 async def worker_loop(notify: Optional[Notifier] = None, poll_seconds: float = 2.0) -> None:
     """Run until cancelled. Jobs left 'running' by a crash are re-queued first."""
     with SessionLocal() as s:
@@ -96,10 +114,7 @@ async def worker_loop(notify: Optional[Notifier] = None, poll_seconds: float = 2
                     continue
                 summary = await asyncio.to_thread(run_job, s, job)
                 if notify and job.chat_id:
-                    try:
-                        await notify(job, summary)
-                    except Exception:
-                        log.exception("notify failed for job %s", job.id)
+                    await notify_with_retry(notify, job, summary)
         except asyncio.CancelledError:
             raise
         except Exception:
