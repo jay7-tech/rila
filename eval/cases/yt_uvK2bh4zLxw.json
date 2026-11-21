@@ -1,0 +1,41 @@
+{
+  "id": "yt_uvK2bh4zLxw",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/uvK2bh4zLxw",
+  "language": "Kannada",
+  "now": "2026-11-21T15:46:18",
+  "posted_at": "2026-11-16T10:42:01",
+  "caption": "Address : Kamakshipalya, Kaveripura, Bangalore\n\nTimings : 12:30pm to 3:30pm \n\nDishes Tasted : \nFull Veg Meals : 80rs \nPoori : 50rs",
+  "transcript": "[0:00-0:05 speech] From 40 years, no matter how crowded it is, we all have been eating a lot.\n[0:02-0:04 screen] Yes\n[0:05-0:07 speech] This is a restaurant that started for Badur.\n[0:06 screen] ந்த\n[0:07-0:09 speech] Everyone in Badur has come and eaten a lot.\n[0:09-0:11 speech] This is Sri Ganesh Bhavan.\n[0:10 screen] all\n[0:11-0:15 speech] This is located in the industrial estate of Kamaakshipalya, Kaveripura, Bengaluru.\n[0:15-0:18 speech] Pure vegetarian restaurants are giving full meals for 80rs.\n[0:18-0:23 speech] In this, you have to say that you want to eat a lot of food,\n[0:23-0:27 speech] including poori, pallya, white rice, sambar, rasam, masala, majgi, and apple.\n[0:27-0:28 speech] Do what you love.",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "Sri Ganesh Bhavan",
+        "names": [
+          "Full Veg Meal 80 Rs"
+        ],
+        "city": "Bangalore"
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Full Veg Meal 80 Rs",
+      "venue": "Sri Ganesh Bhavan",
+      "venue_en": "Sri Ganesh Bhavan",
+      "city": "Bangalore",
+      "area": "Kamakshipalya, Kaveripura",
+      "summary": "Pure vegetarian restaurant offering a full veg meal for 80 rs, including poori, pallya, white rice, sambar, rasam, masala, majgi, and apple.",
+      "price_text": "80 rs",
+      "evidence": "Pure vegetarian restaurants are giving full meals for 80rs.",
+      "evidence_source": "speech",
+      "evidence_at": 15.0,
+      "grounded": true,
+      "confidence": 0.96
+    }
+  ],
+  "ungrounded_dropped": 0
+}

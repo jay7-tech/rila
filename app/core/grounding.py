@@ -63,3 +63,22 @@ def ground(quote: Optional[str], lines: Sequence[Line], caption: str = "", thres
         if joined and _score(q, joined) >= threshold:
             return Hit(source or "multi", _first_line(q, lines, source), _score(q, joined))
     return None
+
+
+def name_in_source(names: Sequence[Optional[str]], lines: Sequence[Line], caption: str = "") -> bool:
+    """True when at least one spelling of a venue name occurs in the caption, speech or on-screen text.
+
+    Guards against a model that attaches a plausible-sounding name which nobody said. Names shorter than
+    3 letters cannot be checked and are given the benefit of the doubt; 3-4 letter names (CTR, MTR) must
+    appear exactly.
+    """
+    haystack = " ".join(h for h in [normalize(caption)] + [normalize(l.text) for l in lines] if h)
+    checked = False
+    for name in names:
+        n = normalize(name)
+        if len(n) < 3:
+            continue
+        checked = True
+        if n in haystack or (len(n) >= 5 and fuzz.partial_ratio(n, haystack) >= THRESHOLD):
+            return True
+    return not checked

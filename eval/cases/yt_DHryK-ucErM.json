@@ -1,0 +1,35 @@
+{
+  "id": "yt_DHryK-ucErM",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/DHryK-ucErM",
+  "language": "Kannada",
+  "now": "2026-11-21T15:48:52",
+  "posted_at": "2025-12-13T12:11:38",
+  "caption": "‼️🥵Macchi fish 20+ verities fish in 1spot 😳🙄fish meals just99rs #viral",
+  "transcript": "[0:00-0:03 speech] What is this? Where to go for lunch?\n[0:03-0:10 speech] If your friend or girlfriend is saying that you can't eat good fish in the market, then come to this spot.\n[0:10-0:14 speech] Because there are so many fish that you can't see.\n[0:14-0:18 speech] We came to know that there are 20 varieties of fish in the entire sea.\n[0:18-0:22 speech] Every fish comes from Mangalore and gets proper Mangalore authentic food.\n[0:22-0:27 speech] The restaurant is located at 80 feet from the city of Jagudeshra.\n[0:27-0:29 speech] The other two outlets are in Mangalore.\n[0:29-0:31 speech] fish malakum masala masala thinneo\n[0:31-0:33 speech] menne manne adhru nijwaglu ehiglu\n[0:33-0:35 speech] aadheegu ungal i dhinguru\n[0:35-0:45 speech] meenalli rawa fry, tava fry, masala fry\n[0:45-0:47 speech] fish mills kuda sikthida\n[0:47-0:49 speech] kotra kaas thaknage\n[0:49-0:51 speech] ollai ouda mada bekk andre\n[0:51-0:53 speech] macchi ge friends and family\n[0:53-0:55 speech] alluru kuda visit madi\n[0:55-0:57 speech] thumba andre thumba kushi yaktira\n[0:57-0:59 speech] bye bye",
+  "expected": {
+    "items": [
+      {
+        "kind": "offer",
+        "venue": "Fish meals just 99 rs",
+        "names": [],
+        "city": "Jagudeshra"
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "offer",
+      "category": "food",
+      "title": "Fish meals just 99 rs",
+      "city": "Jagudeshra",
+      "summary": "A restaurant near Jagudeshra offers fish meals for just 99 rupees, featuring over 20 varieties of fish and Mangalore‑style preparations.",
+      "price_text": "99 rs",
+      "evidence": "fish meals just99rs",
+      "evidence_source": "caption",
+      "grounded": true,
+      "confidence": 0.78
+    }
+  ],
+  "ungrounded_dropped": 0
+}

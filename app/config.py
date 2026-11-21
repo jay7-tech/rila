@@ -26,6 +26,9 @@ class Settings:
     port: int
     run_migrations: bool  # false when a separate 'migrate' step handles it
     asr_language: str  # '' = detect the spoken language automatically
+    asr_engine: str  # auto (Groq Whisper when GROQ_API_KEY is set, else local) | groq | local
+    groq_asr_model: str
+    ocr_min_conf_nonlatin: float  # stricter bar for non-Latin lines: Tesseract invents them on busy video
     ocr_langs: str  # tesseract language codes joined with '+', e.g. eng+hin+kan
     ocr_min_conf: float  # drop OCR words below this confidence (0-100)
     max_frames: int  # frames sampled per video for on-screen text
@@ -55,7 +58,10 @@ def get_settings() -> Settings:
         port=int(e("PORT", "8000")),
         run_migrations=e("RUN_MIGRATIONS", "1").strip().lower() not in ("0", "false", "no"),
         asr_language=e("ASR_LANGUAGE", "").strip(),
-        ocr_langs=e("OCR_LANGS", "eng+hin+kan+tam+tel+mal").strip(),
+        asr_engine=e("ASR_ENGINE", "auto").strip().lower(),
+        groq_asr_model=e("GROQ_ASR_MODEL", "whisper-large-v3").strip(),
+        ocr_min_conf_nonlatin=float(e("OCR_MIN_CONF_NONLATIN", "75")),
+        ocr_langs=e("OCR_LANGS", "eng+hin+kan+tel").strip(),
         ocr_min_conf=float(e("OCR_MIN_CONF", "60")),
         max_frames=int(e("MAX_FRAMES", "30")),
         max_video_minutes=int(e("MAX_VIDEO_MINUTES", "20")),

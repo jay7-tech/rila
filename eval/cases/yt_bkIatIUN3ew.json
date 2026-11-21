@@ -1,0 +1,40 @@
+{
+  "id": "yt_bkIatIUN3ew",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/bkIatIUN3ew",
+  "language": "Hindi",
+  "now": "2026-11-21T15:38:49",
+  "posted_at": "2026-11-19T07:22:41",
+  "caption": "This is 📍VV Puram Food street and this is the most iconic one. But there were some parts I liked and some parts I did not, have included mostly the ones I liked. But this street needs to up its hygiene level game yaar. I mean most of the food street vendors don’t wear gloves and I had issues with the water they use in the food.\n\nHope this improves someday.",
+  "transcript": "[0:00-0:03 speech] Welcome to the most favourite food street of Bangalore\n[0:01-0:03 screen] 60 Year Old Food Street\n[0:01-0:03 screen] Bengaluru\n[0:03-0:05 screen] ar Old\n[0:03-0:05 screen] ‘in Bengaluru\n[0:03-0:06 speech] so uptak toh tum samajhi gaye hoge ki hum kahan aay hai\n[0:05-0:07 screen] Year/Old Fo:\n[0:05-0:07 screen] Beng:\n[0:06-0:11 speech] so sabse pehle we were pulled by this arebele dosa and yaar yeh kaafi different tha\n[0:11-0:16 speech] next up was this dessert that tastes like a pudding but was unbelievably good\n[0:16-0:20 speech] ab yeh uncle kaafi mahal banaake jamun and mojito shots pila rahe the\n[0:20-0:24 speech] toh fomo meh maine bhi try kiya but you can skip this\n[0:24-0:28 speech] next up was this crispy kadu bele jo mujhe kabse try karne the yaar\n[0:28-0:35 speech] and while walking this capsicum budgie caught my eye and yaar if you didnt eat this then you are missing a lot dude\n[0:35-0:41 speech] now I am Sindhi so how can I miss masala papad and this was yum\n[0:41-0:45 speech] now on the next cart I was getting this mango pineapple corn chaat\n[0:45-0:48 speech] bhai this was next level spicy and spicy\n[0:48-0:53 speech] and lastly to comfort my taste buds I had to try the OG Doodh Pheni dude\n[0:53-0:56 speech] and oh my god nothing can beat this combo\n[0:54-0:56 screen] யுகி\n[0:56-0:58 speech] so now follow and tell me where to go next\n[0:58-0:59 speech] I did not have issues with the wate but I had issues with the wate",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "VV Puram Food street",
+        "names": [
+          "VV Puram Food Street",
+          "VV Puram Food Street"
+        ],
+        "city": "Bangalore"
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "attraction",
+      "title": "VV Puram Food Street",
+      "venue": "VV Puram Food street",
+      "venue_en": "VV Puram Food Street",
+      "city": "Bangalore",
+      "area": "VV Puram",
+      "summary": "The most iconic food street in Bangalore, known for a variety of snacks but criticized for poor hygiene practices like vendors not wearing gloves and using questionable water.",
+      "evidence": "This is 📍VV Puram Food street and this is the most iconic one. But there were some parts I liked and some parts I did not, have included mostly the ones I liked. But this street needs to up its hygiene level game yaar. I mean most of the food street vendors don’t wear gloves and I had issues with the water they use in the food.",
+      "evidence_source": "caption",
+      "grounded": true,
+      "confidence": 0.96
+    }
+  ],
+  "ungrounded_dropped": 0
+}

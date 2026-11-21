@@ -1,0 +1,150 @@
+{
+  "id": "yt_RN3HjuMrJgU",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/RN3HjuMrJgU",
+  "language": "English",
+  "now": "2026-11-21T15:43:47",
+  "posted_at": "2026-10-12T07:00:03",
+  "caption": "My Bangalore food list, built over years of eating my way through the city:",
+  "transcript": "[0:00-0:02 speech] My favourite places to eat in Bangalore are\n[0:01-0:02 screen] places to eat\n[0:02-0:04 screen] in Bangalore are)\n[0:02-0:05 speech] First, if it's desert, I love Corner House\n[0:05-0:06 speech] And I think I have a soft spot to it\n[0:06-0:10 speech] Second, Dosa in CTR and Bangalore Cafe\n[0:09-0:11 screen] SINCE 1952\n[0:10-0:13 speech] When I say Bangalore Cafe, the one in Jainagar\n[0:12-0:13 screen] Jayanagar.\n[0:13-0:15 speech] Third, the Vivipuram Food Street\n[0:15-0:18 speech] Fourth, the Dhunne Biryani, the green colour rice biryani\n[0:18-0:20 speech] Which I genuinely think is amazing\n[0:20-0:24 speech] You must try it in Cotton Pet, it's called SGS Gundupala\n[0:21-0:22 screen] ‘You must try it\n[0:22-0:23 screen] in\\Cotton Pet)\n[0:23-0:25 screen] Gundu Palav,\n[0:23-0:25 screen] GUNDUPAL\n[0:23-0:25 screen] Since 1989\n[0:23-0:25 screen] Mil\n[0:23-0:25 screen] FRANCHISEE: ५९६७\n[0:24-0:29 speech] If you're a fan of a little more spicy Andhra style biryani than Meghana Foods for sure\n[0:29-0:31 speech] One would be my favourite place is Farmlore\n[0:31-0:32 screen] RIV\n[0:31-0:32 screen] is Farml\n[0:31-0:33 speech] It's one hell of an experience\n[0:32-0:33 screen] experience...\n[0:33-0:34 speech] It's a 16 seater place\n[0:33-0:35 screen] seate\n[0:34-0:37 speech] It costs like 5-6 thousand rupees per person\n[0:35-0:36 screen] It Costs\n[0:37-0:40 speech] But it's very good if you can spend that money on your anniversary or birthday\n[0:39-0:40 screen] that money on",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "Corner House",
+        "names": [
+          "Corner House – dessert spot"
+        ],
+        "city": "Bangalore"
+      },
+      {
+        "kind": "place",
+        "venue": "Bangalore Cafe",
+        "names": [
+          "Bangalore Cafe in Jayanagar"
+        ],
+        "city": "Bangalore"
+      },
+      {
+        "kind": "place",
+        "venue": "Vivipuram Food Street",
+        "names": [],
+        "city": "Bangalore"
+      },
+      {
+        "kind": "place",
+        "venue": "SGS Gundupala",
+        "names": [
+          "SGS Gundupala (Cottonpet) – green biryani"
+        ],
+        "city": "Bangalore"
+      },
+      {
+        "kind": "place",
+        "venue": "Meghana Foods",
+        "names": [
+          "Meghana Foods – spicy Andhra biryani"
+        ],
+        "city": "Bangalore"
+      },
+      {
+        "kind": "place",
+        "venue": "Farmlore",
+        "names": [
+          "Farmlore – upscale 16‑seater restaurant"
+        ],
+        "city": "Bangalore"
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Corner House – dessert spot",
+      "venue": "Corner House",
+      "venue_en": "Corner House",
+      "city": "Bangalore",
+      "summary": "A favourite dessert place in Bangalore mentioned by the creator.",
+      "evidence": "First, if it's desert, I love Corner House",
+      "evidence_source": "speech",
+      "evidence_at": 2.0,
+      "grounded": true,
+      "confidence": 0.97
+    },
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Bangalore Cafe in Jayanagar",
+      "venue": "Bangalore Cafe",
+      "venue_en": "Bangalore Cafe",
+      "city": "Bangalore",
+      "area": "Jayanagar",
+      "summary": "The Bangalore Cafe located in Jayanagar is highlighted as a go‑to spot for dosa.",
+      "evidence": "When I say Bangalore Cafe, the one in Jainagar",
+      "evidence_source": "speech",
+      "evidence_at": 10.0,
+      "grounded": true,
+      "confidence": 0.95
+    },
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Vivipuram Food Street",
+      "venue": "Vivipuram Food Street",
+      "venue_en": "Vivipuram Food Street",
+      "city": "Bangalore",
+      "summary": "A recommended food street in Bangalore.",
+      "evidence": "Third, the Vivipuram Food Street",
+      "evidence_source": "speech",
+      "evidence_at": 13.0,
+      "grounded": true,
+      "confidence": 0.94
+    },
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "SGS Gundupala (Cottonpet) – green biryani",
+      "venue": "SGS Gundupala",
+      "venue_en": "SGS Gundupala",
+      "city": "Bangalore",
+      "area": "Cottonpet",
+      "summary": "A green‑colour rice biryani spot in Cottonpet, known as SGS Gundupala.",
+      "evidence": "You must try it in Cotton Pet, it's called SGS Gundupala",
+      "evidence_source": "speech",
+      "evidence_at": 20.0,
+      "grounded": true,
+      "confidence": 0.93
+    },
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Meghana Foods – spicy Andhra biryani",
+      "venue": "Meghana Foods",
+      "venue_en": "Meghana Foods",
+      "city": "Bangalore",
+      "summary": "Suggested for fans of spicier Andhra‑style biryani.",
+      "evidence": "If you're a fan of a little more spicy Andhra style biryani than Meghana Foods for sure",
+      "evidence_source": "speech",
+      "evidence_at": 24.0,
+      "grounded": true,
+      "confidence": 0.9
+    },
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Farmlore – upscale 16‑seater restaurant",
+      "venue": "Farmlore",
+      "venue_en": "Farmlore",
+      "city": "Bangalore",
+      "summary": "A 16‑seater restaurant costing about 5‑6 thousand rupees per person, ideal for special occasions.",
+      "price_text": "5‑6 000 ₹ per person",
+      "evidence": "It's a 16 seater place ... It costs like 5-6 thousand rupees per person",
+      "evidence_source": "speech",
+      "evidence_at": 34.0,
+      "grounded": true,
+      "confidence": 0.92
+    }
+  ],
+  "ungrounded_dropped": 0
+}

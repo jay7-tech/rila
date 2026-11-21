@@ -103,3 +103,8 @@ docker compose --profile test run --rm tests
 - Each worker processes one video at a time; run more workers for more throughput.
 
 The full architecture and roadmap is the "Rilla: Architecture and Build Roadmap" document.
+
+## Speech and OCR engines
+- `ASR_ENGINE=auto` (default) uses Groq Whisper large-v3 when `GROQ_API_KEY` is set, otherwise local faster-whisper. If Groq fails it falls back to local. **Audio is sent to Groq unless `ASR_ENGINE=local`.**
+- `OCR_LANGS` defaults to `eng+hin+kan+tel`; `OCR_MIN_CONF_NONLATIN` filters junk in non-Latin scripts.
+- Items whose venue name does not appear in the caption, speech or on-screen text are dropped (counted as `ungrounded_dropped`).

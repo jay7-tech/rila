@@ -109,3 +109,18 @@ def test_ground_prefers_the_single_line_and_still_rejects_inventions_across_line
     lines = [Line(source="speech", start=1.0, text="Open till midnight"), Line(source="speech", start=3.0, text="Free parking")]
     assert ground("Open till midnight", lines).start == 1.0
     assert ground("Free parking for everyone all night long", lines) is None
+
+
+def test_name_in_source_checks_every_spelling_and_short_names():
+    from app.core.grounding import name_in_source
+
+    lines = [Line(source="speech", start=1.0, text="we went to Vidyarthi Bhavan and then CTR"),
+             Line(source="screen", start=2.0, text="ಗಾಂಧಿ ಬಜಾರ್")]
+    assert name_in_source(["Vidyarthi Bhavan"], lines)
+    assert name_in_source(["Vidyarthi Bhavn"], lines)  # small spelling slip
+    assert name_in_source(["ಗಾಂಧಿ ಬಜಾರ್", "Gandhi Bazaar"], lines)  # either script is enough
+    assert name_in_source(["CTR"], lines)  # three-letter names must appear exactly
+    assert not name_in_source(["MTR"], lines)
+    assert name_in_source(["Atithya"], lines, caption="Spots: 1. Vidyarthi Bhavan 2. Atithya")  # names in the caption count
+    assert not name_in_source(["Truffle Pizza Co"], lines)
+    assert name_in_source([None, "ab"], lines)  # nothing checkable: benefit of the doubt

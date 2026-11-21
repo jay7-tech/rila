@@ -4,6 +4,7 @@
     python -m app.cli make-user "Suresh"      create a web account and print its sign-in link
     python -m app.cli read <link|file|text>   see what Rilla perceives and extracts (no database writes)
     python -m app.cli capture <document id>   save a processed video as a draft evaluation case
+    python -m app.cli batch <links.txt>       read many links, write draft cases and a review sheet
     python -m app.cli eval                    score extraction against the labelled cases
 """
 from __future__ import annotations
@@ -145,6 +146,35 @@ def cmd_capture(args) -> int:
     return 0
 
 
+def cmd_batch(args) -> int:
+    from .evalkit import batch, runner
+    from .services.extract import _groq_json
+    from .sources.safeurl import UrlRejected, validate_url
+
+    if not get_settings().groq_api_key:
+        print("Set GROQ_API_KEY first.")
+        return 1
+    with open(args.links, encoding="utf-8") as f:
+        urls = batch.clean_links(f.read())
+    good = []
+    for u in urls:
+        try:
+            good.append(validate_url(u, get_settings().allowed_hosts))
+        except UrlRejected as e:
+            print(f"Skipping {u}: {e}")
+    print(f"{len(good)} links. Each takes about a minute; you can stop and re-run, finished ones are skipped.")
+    status = batch.run_batch(good, _ingest, runner.cached(_groq_json), runner.CASES_DIR, pause=args.pause, force=args.force)
+    sheet = os.path.join(os.path.dirname(runner.CASES_DIR), "review.md")
+    with open(sheet, "w", encoding="utf-8") as f:
+        f.write(batch.review_sheet(runner.CASES_DIR))
+    bad = {u: m for u, m in status.items() if m not in ("ok", "skipped")}
+    print(f"\nDone: {sum(m == 'ok' for m in status.values())} new, {sum(m == 'skipped' for m in status.values())} skipped, {len(bad)} failed.")
+    for u, m in bad.items():
+        print(f"  FAILED {u}: {m}")
+    print(f"Review sheet: {sheet}")
+    return 0
+
+
 def cmd_eval(args) -> int:
     from .evalkit import runner
     from .services.extract import _groq_json
@@ -184,6 +214,11 @@ def main(argv=None) -> int:
     a = sub.add_parser("capture")
     a.add_argument("document_id", type=int)
     a.set_defaults(fn=cmd_capture)
+    a = sub.add_parser("batch")
+    a.add_argument("links", help="text file with one video link per line")
+    a.add_argument("--pause", type=float, default=3.0, help="seconds between links (be gentle with YouTube)")
+    a.add_argument("--force", action="store_true", help="redo links that already have a case")
+    a.set_defaults(fn=cmd_batch)
     a = sub.add_parser("eval")
     a.add_argument("--cases")
     a.add_argument("--include-synthetic", action="store_true")

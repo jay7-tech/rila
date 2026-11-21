@@ -12,13 +12,13 @@ from pydantic import BaseModel, Field, ValidationError
 from ..config import get_settings
 from ..core.chunking import chunk_lines
 from ..core.document import parse_rendered
-from ..core.grounding import ground
+from ..core.grounding import ground, name_in_source
 from ..core.text import normalize
 from ..signals.models import ExtractedSignal
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = "3"  # bump when the prompt changes; evaluation runs record it
+PROMPT_VERSION = "4"  # bump when the prompt changes; evaluation runs record it
 MAX_CHARS_PER_CALL = 9000  # longer transcripts are read in overlapping chunks
 CHUNK_TOKENS = 1500
 
@@ -74,7 +74,8 @@ def build_prompt(now: datetime, posted_at: Optional[datetime]) -> str:
         "(null for info)\n"
         "  venue_en: the same name spelled with English letters (transliterate if needed)\n"
         "  city, area: where it is, in English. If the video names one city or locality once and then lists "
-        "several venues, give every venue that city/area.\n"
+        "several venues, give every venue that city/area. If speech never says the city but the caption or "
+        "hashtags do (for example #bengaluru or 'Bangalore'), use that city.\n"
         "  summary: one or two plain English sentences; price_text: price or discount if stated; "
         "duration_text: the time window in the creator's words\n"
         "  starts_at, ends_at: ISO dates (YYYY-MM-DD) or datetimes (YYYY-MM-DDTHH:MM), ONLY when the "
@@ -178,10 +179,11 @@ def _clean(result: ExtractionResult, min_conf: float) -> ExtractionResult:
         title = (it.title or it.venue_en or it.venue or "").strip()
         if not title or it.confidence < min_conf:
             continue
-        if it.kind in ("place", "offer") and not (it.city or it.area):
-            continue  # cannot place it on a map
-        if it.kind == "place" and not (it.venue or it.venue_en or it.title):
-            continue
+        named = bool(it.venue or it.venue_en)
+        if it.kind == "place" and not named:
+            continue  # "a smash burger spot" is not something you can go to
+        if it.kind in ("place", "offer") and not (it.city or it.area) and not named:
+            continue  # no name and no location: nothing to find. A named place without a city is kept, unpinned.
         if len(title.split()) == 1 and title.islower():
             continue  # single lowercase word is almost always noise
         it.title = title
@@ -195,8 +197,12 @@ def _clean(result: ExtractionResult, min_conf: float) -> ExtractionResult:
 def _ground(result: ExtractionResult, caption: str, transcript: str) -> ExtractionResult:
     """Keep only items whose evidence quote really occurs in the video. Items without a quote stay, unverified."""
     lines = parse_rendered(transcript)
-    kept, dropped = [], 0
+    kept, dropped, unnamed = [], 0, 0
     for it in result.items:
+        if it.kind in ("place", "offer") and (it.venue or it.venue_en) and not name_in_source([it.venue, it.venue_en], lines, caption):
+            unnamed += 1  # nobody said or showed this name
+            log.info("dropped item whose name is not in the video: %r", (it.venue_en or it.venue or "")[:60])
+            continue
         if it.evidence and it.evidence.strip():
             hit = ground(it.evidence, lines, caption)
             if hit is None:
@@ -207,7 +213,8 @@ def _ground(result: ExtractionResult, caption: str, transcript: str) -> Extracti
             it.grounded, it.evidence_source, it.evidence_at = True, hit.source, hit.start
         kept.append(it)
     result.items = kept
-    result.stats["ungrounded_dropped"] = result.stats.get("ungrounded_dropped", 0) + dropped
+    result.stats["ungrounded_dropped"] = result.stats.get("ungrounded_dropped", 0) + dropped + unnamed  # invented quote or invented name
+    result.stats["name_not_found_dropped"] = result.stats.get("name_not_found_dropped", 0) + unnamed
     return result
 
 

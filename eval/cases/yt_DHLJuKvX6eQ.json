@@ -1,0 +1,40 @@
+{
+  "id": "yt_DHLJuKvX6eQ",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/DHLJuKvX6eQ",
+  "language": "English",
+  "now": "2026-11-21T15:35:21",
+  "posted_at": "2026-04-10T12:30:00",
+  "caption": "Buff burgers in Bengaluru hit different, and this spot proves it.\n\nI’ve been loyal to Beyond Burg for years, so when they opened a new outlet in Indiranagar, I had to see if it still deserved a place in the “best burgers in Bangalore” conversation. Between the minimal grey-and-white space, that pop of signature green and a very Gen Z-coded merch corner, it looks like a café you’d hang at—but the real story is on the plate.\n\nThink specialty burgers under one roof: smoked brisket whoppers, juicy smash burgers, fried chicken burgers, old-school cheeseburgers and even serious smoked meat builds that feel straight out of a delicatessen. My usual order? Brisket Whopper, Smashtrami and Buff Animal Fries—smoky, messy, cheesy and loaded in all the right ways. This time I added the Swiss Cheese Burger and the Birria Smash Burger, and the combo of crispy smashed patties, fall-apart beef and bold, tangy sauces pretty much locked this in as my go-to for buff burgers in Indiranagar and maybe the best burgers in India for me.\n\nIf you’re planning weekend plans, date night, boys’ night out or just hunting halal beef burgers, smoked brisket, pastrami, chicken burgers and thick hot chocolate in Bangalore, save this for your next burger craving cz trust me this is easily the best burgers in India if not Bangalore. Follow me for more honest Bangalore dining guides, burger finds and places that are actually worth your calories.\n\n#bangalorefoodie #smashburgers #halalfood #bangalorefood #eatwithzafir #food #bangalorefood #bangalorefoodie #bangalorefoodvlog #spottedonshorts #beefburgers #brisket #pastrami #smashburger #bangalorefood #birria\n#bangalorefoodvlog\n#bangalore\n#bestburgers\n#indiranagar\n#bangalorerestaurants\n#thingstodoinbangalore\n#foodvloggerindia\n#halalfood",
+  "transcript": "[0:00-0:30 speech] buff burgers are my favorite type and this place in Bengaluru is the GOAT let me show you this spot has been my favorite in town since years so when they opened a new outlet in Indiranagar I had to visit and the first thing I noted was how clean and minimal the space feels but I wasn't there to admire the walls I was there for the burgers and of course I started with my favorites the brisket Whopper that brisket is smoked for 14 hours and trust me you can tell when you take a bite the smashed Rami it had that crispy smashed patty and pastrami that just falls apart the buff animal fries was loaded cheesy and\n[0:11-0:13 screen] burger\n[0:15-0:16 screen] BURGERS,\n[0:16-0:18 screen] Sid\n[0:30-0:58 speech] and still perfectly crisp the person at the counter insisted me to try something different and I'm glad he did the Swiss cheese burger was rich meaty and comforting and the Biriya smash burger was easily one of the juiciest burgers I've had I washed it all down with a peach iced tea but the real surprise was the dark hot chocolate all of this was at Beyond Burg a burger place that does everything from smash burgers to smoked meats and somehow nails it and the best part all of this is 100% halal if you love burgers the way I do follow me so we can explore more spots together",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "Beyond Burg",
+        "names": [
+          "Beyond Burg – New Indiranagar outlet"
+        ],
+        "city": "Bangalore"
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Beyond Burg – New Indiranagar outlet",
+      "venue": "Beyond Burg",
+      "venue_en": "Beyond Burg",
+      "city": "Bangalore",
+      "area": "Indiranagar",
+      "summary": "Beyond Burg opened a new outlet in Indiranagar, Bangalore, serving a range of specialty burgers including smoked brisket, smash burgers, and halal options.",
+      "evidence": "all of this was at Beyond Burg a burger place that does everything from smash burgers to smoked meats and somehow nails it",
+      "evidence_source": "speech",
+      "evidence_at": 30.0,
+      "grounded": true,
+      "confidence": 0.98
+    }
+  ],
+  "ungrounded_dropped": 0
+}

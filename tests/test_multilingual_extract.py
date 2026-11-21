@@ -43,7 +43,7 @@ def test_grounded_item_records_where_the_quote_was_found():
 def test_item_with_invented_quote_is_dropped_and_counted():
     llm = llm_with({"items": [item(evidence="Truffle Pizza Co is giving free pizza"), item(venue="X Cafe", venue_en="X Cafe",
                                   title="X Cafe", evidence="aaj sirf 99 rupaye mein full plate")], "signals": []})
-    res = extract("", TRANSCRIPT, NOW, llm=llm)
+    res = extract("X Cafe", TRANSCRIPT, NOW, llm=llm)
     assert [i.venue for i in res.items] == ["X Cafe"]
     assert res.stats["ungrounded_dropped"] == 1
 
@@ -68,6 +68,7 @@ def test_prompt_asks_for_original_script_english_fields_and_a_quote():
 
 def test_long_transcript_is_read_in_chunks_and_results_are_merged():
     lines = [f"[{i // 60}:{i % 60:02d} speech] " + ("word " * 60) for i in range(0, 300)]
+    lines[0] = "[0:00 speech] Meghana Foods " + "word " * 60
     transcript = "\n".join(lines)
     assert len(transcript) > ex.MAX_CHARS_PER_CALL
     replies = []
@@ -80,3 +81,25 @@ def test_long_transcript_is_read_in_chunks_and_results_are_merged():
     assert len(replies) > 1  # more than one call
     assert all(len(u) < ex.MAX_CHARS_PER_CALL + 500 for u in replies)
     assert len(res.items) == 1  # the same shop found in every chunk is kept once
+
+
+def test_invented_venue_name_is_dropped_even_if_its_quote_is_real():
+    llm = llm_with({"items": [item(venue="Truffle Pizza Co", venue_en="Truffle Pizza Co", title="Truffle Pizza Co",
+                                   evidence="aaj sirf 99 rupaye mein full plate")], "signals": []})
+    res = extract("", TRANSCRIPT, NOW, llm=llm)
+    assert res.items == [] and res.stats["ungrounded_dropped"] == 1
+
+
+def test_named_place_without_a_city_is_kept_but_an_unnamed_one_is_not():
+    named = item(city=None, area=None, evidence="Meghana Foods")
+    unnamed = item(venue=None, venue_en=None, title="A smash burger spot", city=None, area=None, evidence=None)
+    res = extract("", TRANSCRIPT, NOW, llm=llm_with({"items": [named, unnamed], "signals": []}))
+    assert [i.venue_en for i in res.items] == ["Meghana Foods"]
+    no_name_in_city = item(venue=None, venue_en=None, title="Burger spot")  # has a city but no name
+    assert extract("", TRANSCRIPT, NOW, llm=llm_with({"items": [no_name_in_city], "signals": []})).items == []
+
+
+def test_prompt_tells_the_model_to_use_the_city_from_hashtags():
+    llm = llm_with({"items": [], "signals": []})
+    extract("cap #bengaluru", TRANSCRIPT, NOW, llm=llm)
+    assert "hashtags" in llm.calls[0][0]

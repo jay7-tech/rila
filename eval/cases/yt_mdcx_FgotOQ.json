@@ -1,0 +1,38 @@
+{
+  "id": "yt_mdcx_FgotOQ",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/mdcx_FgotOQ",
+  "language": "Kannada",
+  "now": "2026-11-21T15:42:11",
+  "posted_at": "2024-09-24T16:42:42",
+  "caption": "World famous kempamma hotel 🔥❗Viral hotel reviews | Kempamma | Latest food | #food #viralvideo",
+  "transcript": "[0:00-0:21 speech] Kempamma hotel reviews Kempamma Latest food\n[0:02 screen] ial",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "Kempamma hotel",
+        "names": [
+          "Kempamma Hotel"
+        ],
+        "city": null
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "attraction",
+      "title": "Kempamma Hotel",
+      "venue": "Kempamma hotel",
+      "venue_en": "Kempamma hotel",
+      "summary": "A video featuring reviews of the world‑famous Kempamma Hotel and its latest food offerings.",
+      "evidence": "Kempamma hotel reviews Kempamma Latest food",
+      "evidence_source": "speech",
+      "evidence_at": 0.0,
+      "grounded": true,
+      "confidence": 0.9
+    }
+  ],
+  "ungrounded_dropped": 0
+}

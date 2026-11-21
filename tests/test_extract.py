@@ -34,7 +34,7 @@ GOOD = json.dumps({
 
 
 def test_filters_low_confidence_unplaceable_and_noise():
-    res = extract("cap", "tr", NOW, llm=llm_returning(GOOD), min_confidence=0.7)
+    res = extract("Third Wave Coffee cold brew offer, also toit", "tr", NOW, llm=llm_returning(GOOD), min_confidence=0.7)
     assert [i.title for i in res.items] == ["Buy one get one on cold brews"]
     assert [s.value for s in res.signals] == ["packed"]  # the one with no area is dropped
 
@@ -48,7 +48,7 @@ def test_prompt_contains_dates_for_relative_words():
 
 def test_retries_once_on_invalid_json_then_succeeds():
     llm = llm_returning("not json", GOOD)
-    res = extract("cap", "tr", NOW, llm=llm, min_confidence=0.7)
+    res = extract("Third Wave Coffee cold brew offer, also toit", "tr", NOW, llm=llm, min_confidence=0.7)
     assert len(llm.calls) == 2 and "invalid" in llm.calls[1][1] and len(res.items) == 1
 
 
@@ -57,9 +57,9 @@ def test_gives_empty_result_when_always_invalid():
     assert res.items == [] and res.signals == []
 
 
-def test_place_gets_venue_from_title():
-    reply = json.dumps({"items": [{"kind": "place", "category": "food", "title": "Dyu Art Cafe", "city": "Bengaluru", "confidence": 0.9}]})
-    res = extract("c", "t", NOW, llm=llm_returning(reply), min_confidence=0.7)
+def test_place_venue_falls_back_to_english_name():
+    reply = json.dumps({"items": [{"kind": "place", "category": "food", "title": "Dyu Art Cafe", "venue_en": "Dyu Art Cafe", "city": "Bengaluru", "confidence": 0.9}]})
+    res = extract("Dyu Art Cafe", "t", NOW, llm=llm_returning(reply), min_confidence=0.7)
     assert res.items[0].venue == "Dyu Art Cafe"
 
 

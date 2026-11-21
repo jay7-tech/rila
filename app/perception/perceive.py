@@ -38,7 +38,8 @@ def perceive_file(
                 from .asr import transcribe as asr_fn  # heavy import only when needed
             speech, lang = asr_fn(path, hint=hint) if hint else asr_fn(path)
             segments += speech
-            meta.update(language=lang, asr_model=s.whisper_model)
+            engine = "groq" if (s.asr_engine == "groq" or (s.asr_engine == "auto" and s.groq_api_key)) else "local"
+            meta.update(language=lang, asr_model=s.groq_asr_model if engine == "groq" else s.whisper_model, asr_engine=engine)
         except Exception:
             log.exception("speech recognition failed; continuing with on-screen text")
             meta["asr_error"] = True
@@ -50,7 +51,8 @@ def perceive_file(
                 with tempfile.TemporaryDirectory() as tmp:
                     raw = media.sample_frames(path, os.path.join(tmp, "frames"), None if info.is_image else info.duration, s.max_frames)
                     kept = raw if info.is_image else frames_mod.distinct_frames(raw)
-                    segments += ocr.screen_segments(kept, langs, s.ocr_min_conf, info.duration, ocr_fn=ocr_fn)
+                    segments += ocr.screen_segments(kept, langs, s.ocr_min_conf, info.duration, ocr_fn=ocr_fn,
+                                              min_conf_nonlatin=s.ocr_min_conf_nonlatin if ocr_fn is ocr.ocr_image else None)
                     meta.update(frames_sampled=len(raw), frames_kept=len(kept), ocr_langs=langs)
             except media.MediaError:
                 log.warning("could not sample frames")

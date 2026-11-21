@@ -1,0 +1,42 @@
+{
+  "id": "yt_6MHKPCmDoW8",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/6MHKPCmDoW8",
+  "language": "Telugu",
+  "now": "2026-11-21T15:50:46",
+  "posted_at": "2026-05-28T13:38:29",
+  "caption": "49/- rs ki Chicken Biryani 😬😍 Offers Adhiripoyayiii 🤯 #trending #shorts #youtubeshorts",
+  "transcript": "[0:00-0:02 speech] Just Rs.49 for this kind of biryani?\n[0:02-0:04 speech] Money and revenue deal?\n[0:04-0:05 speech] Don't miss this offer at all.\n[0:05-0:10 speech] The matter is that they are opening a grand food court in the second floor of Gajuwaka Celeste Mall.\n[0:06-0:08 screen] MALL\n[0:10-0:14 speech] From tiffins, there are many food courts from Indian, Chinese, and Continental to be available here.\n[0:11-0:13 screen] COMBOS\n[0:14-0:16 speech] The place is also very spacious.\n[0:16-0:17 speech] If you come to the offer issue,\n[0:17-0:20 speech] 4 days 4 crazy offers were placed below the inaugural offer.\n[0:20-0:22 speech] From 5 pm on 20th May,\n[0:22-0:26 speech] Zafrani Chicken Biryani is given to the first 500 customers for just Rs.49.\n[0:26-0:29 speech] On 29th May, they are giving one pizza for free if you buy one pizza.\n[0:29-0:32 speech] టర్టీ మే ఏతే ఏ చేనిస్ టర్ట్రేన్న జస్ నాఇటినేయ రూపిస్ కే ఇచ్చాస్తునారు\n[0:32-0:36 speech] లాస్ డే తర్టి ఫరస్ట్ మే ఏతే ఒక ఆఈస్క్రింబ కొంటే ఒక ఆఈస్క్రింబ ఫ్రిగా ఇచ్చాస్తారు\n[0:36-0:39 speech] ఇస్సగతోట్లు ఉన్న మాయా రెస్టెంట్ వాలే ఇద్ ఫూడ్ కోట్ ఇద్ ఓపిం జాస్తునారు\n[0:36-0:38 screen] ತ್ತ |\n[0:39-0:42 speech] టేస్టు కోడా చాలా చాలా బావంటుందే ఈ ఆఫర్స్నేతే అస్సలు మిస్సవాద్దు\n[0:42-0:52 speech] ట్వెంటీయత్ ఇవినింగ్ అయత్తే అకా లాఇవ్ బెండ్ కూడా పారుతునారు సో మ్యూజిక్ నె ఎంజో చేస్తు ఇ ఫాటినై రూపిస్ బిరియానీన్ కూమేయం\n[0:43-0:45 screen] ఉన్న\n[0:43-0:45 screen] ISCO\n[0:43-0:45 screen] Mey",
+  "expected": {
+    "items": [
+      {
+        "kind": "offer",
+        "venue": "Celeste Mall",
+        "names": [
+          "Rs.49 Zafrani Chicken Biryani"
+        ],
+        "city": null
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "offer",
+      "category": "food",
+      "title": "Rs.49 Zafrani Chicken Biryani",
+      "venue": "Celeste Mall",
+      "venue_en": "Celeste Mall",
+      "area": "Gajuwaka",
+      "summary": "First 500 customers get Zafrani Chicken Biryani for Rs.49 from 5 pm on 20 May.",
+      "price_text": "Rs.49",
+      "duration_text": "from 5 pm on 20 May",
+      "starts_at": "2026-05-20T17:00",
+      "evidence": "Zafrani Chicken Biryani is given to the first 500 customers for just Rs.49.",
+      "evidence_source": "speech",
+      "evidence_at": 22.0,
+      "grounded": true,
+      "confidence": 0.95
+    }
+  ],
+  "ungrounded_dropped": 0
+}

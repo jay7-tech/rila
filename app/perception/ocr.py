@@ -58,7 +58,12 @@ def plausible(text: str) -> bool:
     return letters >= 3 and (letters + sum(1 for k in cats if k == "N")) / max(len(chars), 1) >= 0.7
 
 
-def parse_tsv(tsv: str, min_conf: float) -> List[OcrLine]:
+def is_latin(text: str) -> bool:
+    letters = [c for c in text if c.isalpha()]
+    return bool(letters) and sum(1 for c in letters if "LATIN" in unicodedata.name(c, "")) / len(letters) >= 0.5
+
+
+def parse_tsv(tsv: str, min_conf: float, min_conf_nonlatin: Optional[float] = None) -> List[OcrLine]:
     """Group tesseract TSV words into lines and drop low-confidence words."""
     rows = tsv.splitlines()
     lines: dict = {}
@@ -83,12 +88,14 @@ def parse_tsv(tsv: str, min_conf: float) -> List[OcrLine]:
     for key in order:
         words = lines[key]
         text = " ".join(w for w, _ in words)
-        if plausible(text):
-            out.append(OcrLine(text=text, conf=sum(c for _, c in words) / len(words)))
+        conf = sum(c for _, c in words) / len(words)
+        bar = min_conf if min_conf_nonlatin is None or is_latin(text) else max(min_conf, min_conf_nonlatin)
+        if plausible(text) and conf >= bar:
+            out.append(OcrLine(text=text, conf=conf))
     return out
 
 
-def ocr_image(path: str, langs: str, min_conf: float = 60.0) -> List[OcrLine]:
+def ocr_image(path: str, langs: str, min_conf: float = 60.0, min_conf_nonlatin: Optional[float] = None) -> List[OcrLine]:
     if not langs:
         return []
     try:
@@ -99,7 +106,7 @@ def ocr_image(path: str, langs: str, min_conf: float = 60.0) -> List[OcrLine]:
     except (subprocess.SubprocessError, OSError) as e:
         log.warning("tesseract failed on %s: %s", path, type(e).__name__)
         return []
-    return parse_tsv(res.stdout, min_conf) if res.returncode == 0 else []
+    return parse_tsv(res.stdout, min_conf, min_conf_nonlatin) if res.returncode == 0 else []
 
 
 def screen_segments(
@@ -108,6 +115,7 @@ def screen_segments(
     min_conf: float,
     final_end: Optional[float],
     ocr_fn=ocr_image,
+    min_conf_nonlatin: Optional[float] = None,
 ) -> List[Segment]:
     """OCR every frame and merge a line that stays on screen into one segment with start and end.
 
@@ -118,7 +126,8 @@ def screen_segments(
     done: List[Segment] = []
     for t, path in frames:
         seen = set()
-        for ln in ocr_fn(path, langs, min_conf):
+        lines = ocr_fn(path, langs, min_conf) if min_conf_nonlatin is None else ocr_fn(path, langs, min_conf, min_conf_nonlatin)
+        for ln in lines:
             key = normalize(ln.text)
             if not key or key in seen:
                 continue

@@ -1,0 +1,40 @@
+{
+  "id": "yt_szIUUj9xoE4",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/szIUUj9xoE4",
+  "language": "English",
+  "now": "2026-11-21T15:36:19",
+  "posted_at": "2026-11-15T05:45:44",
+  "caption": "📍Dolphins in Cox Town. \nThis place literally brought the neighbourhood bar culture in Bengaluru and its definitely a crowd favourite.\n\nDo not miss the Ghee Roast.",
+  "transcript": "[0:00-0:04 speech] This is the oldest bar of Bangalore and dude the vibe is unreal\n[0:04-0:06 screen] Bangalore ௮ |\n[0:04-0:08 screen] arin\n[0:04-0:09 speech] Next Bangalorean gem is a crowd favourite bar since 1977\n[0:08-0:10 screen] Dot\n[0:08-0:10 screen] ear old Ba:\n[0:08-0:10 screen] ‘alore\n[0:09-0:13 speech] No frills, simple interiors, easy vibe and that old school charm bro\n[0:13-0:16 speech] Bhai it's a low key bar but it's full\n[0:16-0:21 speech] When you had no drama just solid food we went straight for the Prawn Ghee Rost with Appam\n[0:18-0:20 screen] NEST\n[0:18-0:20 screen] QUOTED ARE FoR 30 |\n[0:20-0:22 screen] ANS\n[0:21-0:25 speech] Ab I know this is had with Neer Dose but I am that Appam kinda girl\n[0:25-0:28 speech] And sahi batao this is one of the best Ghee Rost I have had\n[0:28-0:30 speech] Spicy yet addictive\n[0:30-0:37 speech] Then we tried the Chicken Kandhari and yaar the first hit of spices and coriander on that succulent chicken was just mind blowing\n[0:34-0:36 screen] ay ಕೆ\n[0:37-0:45 speech] Honestly its not about partying here its just about sitting back having a chilled crisp beer talking for hours and just being with your people\n[0:45-0:48 speech] Ended with some ideal ice cream so this is Dolphins in Cox Town\n[0:48-0:52 speech] Yaar seriously if you didn't try this time then you are surely missing out",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "Dolphins",
+        "names": [
+          "Dolphins Bar – classic crowd‑favorite bar"
+        ],
+        "city": "Bengaluru"
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "attraction",
+      "title": "Dolphins Bar – classic crowd‑favorite bar",
+      "venue": "Dolphins",
+      "venue_en": "Dolphins",
+      "city": "Bengaluru",
+      "area": "Cox Town",
+      "summary": "The oldest bar in Bangalore, known for its simple interiors, old‑school charm and popular dishes like Prawn Ghee Roast with Appam and Chicken Kandhari.",
+      "evidence": "This is the oldest bar of Bangalore and dude the vibe is unreal",
+      "evidence_source": "speech",
+      "evidence_at": 0.0,
+      "grounded": true,
+      "confidence": 0.96
+    }
+  ],
+  "ungrounded_dropped": 0
+}

@@ -1,0 +1,40 @@
+{
+  "id": "yt_NEQwF_x8Ke8",
+  "labeled": false,
+  "source": "https://youtube.com/shorts/NEQwF_x8Ke8",
+  "language": "Hindi",
+  "now": "2026-11-21T15:47:56",
+  "posted_at": "2025-01-27T07:15:49",
+  "caption": "World’s most iconic dosa place 😍 | Vidyarthi Bhavan Bangalore #streetfood #foodie",
+  "transcript": "[0:00-0:04 speech] यह दुनिया की सबसे आइकॉनिक डोसा प्लेस और ऐसे डोसे आपने पुरी दुनिया में नहीं देखे होंगे\n[0:04-0:08 speech] यह है बेंगलोर का विद्याती भवन और यह प्लेस आजाधी के पहले से चालू हुई है\n[0:04-0:06 screen] సను |\n[0:06 screen] ci సు\n[0:08-0:12 speech] यहाँ पे दिन रात खाने वालो का ऐसा ही रश होता है चाय आप लोकल हो या हो टूरिस्ट\n[0:12 screen] SEES\n[0:12-0:16 speech] यहाँ पे बिना सामबार के डोसा सर्प किया जाता है पर खाने में बहुत ही मज़ज़दार होते है",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "विद्याती भवन",
+        "names": [
+          "Vidyarthi Bhavan",
+          "Vidyarthi Bhavan – iconic dosa place"
+        ],
+        "city": "Bangalore"
+      }
+    ]
+  },
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Vidyarthi Bhavan – iconic dosa place",
+      "venue": "विद्याती भवन",
+      "venue_en": "Vidyarthi Bhavan",
+      "city": "Bangalore",
+      "summary": "The video highlights Vidyarthi Bhavan in Bangalore as the world’s most iconic dosa spot, known for its crowded atmosphere and delicious dosas served without sambar.",
+      "evidence": "यह है बेंगलोर का विद्याती भवन और यह प्लेस आजाधी के पहले से चालू हुई है",
+      "evidence_source": "speech",
+      "evidence_at": 4.0,
+      "grounded": true,
+      "confidence": 0.96
+    }
+  ],
+  "ungrounded_dropped": 0
+}
