@@ -41,3 +41,11 @@ def make_item(session, user, title, category="food", dlat=0.0, ends_h=None, star
     session.add(item)
     session.commit()
     return item
+
+
+@pytest.fixture(autouse=True)
+def _public_dns(monkeypatch):
+    """No network in tests: every host resolves to a public address."""
+    from app.sources import safeurl
+
+    monkeypatch.setattr(safeurl, "_resolve", lambda host: ["93.184.216.34"])

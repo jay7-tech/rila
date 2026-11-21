@@ -45,6 +45,8 @@ def serialize_item(item: Item, now: datetime, distance_m: Optional[float] = None
         "distance_m": round(distance_m) if distance_m is not None else None,
         "reasons": reasons or [], "source_url": item.source_url, "creator": item.creator,
         "saved_at": item.created_at.isoformat(),
+        "venue_en": item.venue_en, "evidence": item.evidence, "evidence_source": item.evidence_source,
+        "evidence_at": item.evidence_at, "grounded": item.grounded,
     }
 
 

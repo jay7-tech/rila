@@ -25,6 +25,15 @@ class Settings:
     min_confidence: float
     port: int
     run_migrations: bool  # false when a separate 'migrate' step handles it
+    asr_language: str  # '' = detect the spoken language automatically
+    ocr_langs: str  # tesseract language codes joined with '+', e.g. eng+hin+kan
+    ocr_min_conf: float  # drop OCR words below this confidence (0-100)
+    max_frames: int  # frames sampled per video for on-screen text
+    max_video_minutes: int
+    max_upload_mb: int
+    uploads_dir: str
+    open_signup: bool  # anyone may create a web account (off unless you turn it on)
+    allowed_hosts: tuple  # video sites accepted by /api/submit
 
 
 def get_settings() -> Settings:
@@ -45,4 +54,15 @@ def get_settings() -> Settings:
         min_confidence=float(e("MIN_CONFIDENCE", "0.7")),
         port=int(e("PORT", "8000")),
         run_migrations=e("RUN_MIGRATIONS", "1").strip().lower() not in ("0", "false", "no"),
+        asr_language=e("ASR_LANGUAGE", "").strip(),
+        ocr_langs=e("OCR_LANGS", "eng+hin+kan+tam+tel+mal").strip(),
+        ocr_min_conf=float(e("OCR_MIN_CONF", "60")),
+        max_frames=int(e("MAX_FRAMES", "30")),
+        max_video_minutes=int(e("MAX_VIDEO_MINUTES", "20")),
+        max_upload_mb=int(e("MAX_UPLOAD_MB", "200")),
+        uploads_dir=e("UPLOADS_DIR", "./data/uploads"),
+        open_signup=e("OPEN_SIGNUP", "0").strip().lower() in ("1", "true", "yes"),
+        allowed_hosts=tuple(h.strip().lower() for h in e(
+            "ALLOWED_HOSTS", "instagram.com,youtube.com,youtu.be,facebook.com,fb.watch,x.com,twitter.com,tiktok.com"
+        ).split(",") if h.strip()),
     )

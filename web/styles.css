@@ -71,3 +71,14 @@ h1{font:700 clamp(24px,4vw,34px)/1.1 var(--f-display);letter-spacing:-.02em;marg
 [hidden]{display:none!important}
 @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.mapcard{position:static}}
 @media (prefers-reduced-motion:no-preference){.rec,.chip{transition:border-color .15s,box-shadow .15s}}
+
+/* add panel modes, text input, source evidence, sign-up */
+.modes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.addrow textarea{flex:1 1 240px;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font:inherit;resize:vertical}
+.addrow input[type=file]{padding:7px 10px}
+.addrow[hidden]{display:none}
+.proof{display:grid;gap:4px;margin-top:6px;padding:8px 10px;border-left:3px solid var(--sea);background:var(--bg);border-radius:6px;font-size:13px}
+.proof q{font-style:italic}
+.proof .ctx{font:12px var(--f-data);color:var(--muted)}
+.signup{display:grid;gap:8px;text-align:left}
+.signup input{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}

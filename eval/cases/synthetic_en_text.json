@@ -1,0 +1,18 @@
+{
+  "id": "synthetic_en_text",
+  "synthetic": true,
+  "note": "Harness smoke test written by hand; not a real reel.",
+  "language": "en",
+  "now": "2026-10-22T12:00:00",
+  "caption": "Best biryani in Indiranagar!",
+  "transcript": "[0:03 speech] Meghana Foods in Indiranagar Bengaluru is serving a full biryani plate for 99 rupees today",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "Meghana Foods",
+        "city": "Bengaluru"
+      }
+    ]
+  }
+}

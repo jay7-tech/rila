@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime
 from typing import Awaitable, Callable, Optional
 
@@ -10,6 +11,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from ..db import SessionLocal
+from ..sources import local as local_src
 from ..models import Job, User, utcnow
 from . import embeddings as emb_svc
 from . import extract as extract_svc
@@ -22,8 +24,12 @@ log = logging.getLogger(__name__)
 Notifier = Callable[[Job, dict], Awaitable[None]]
 
 
-def enqueue(session: Session, user: User, url: str, chat_id: Optional[int] = None) -> Job:
-    job = Job(user_id=user.id, url=url, chat_id=chat_id, status="queued")
+def enqueue(
+    session: Session, user: User, url: str, chat_id: Optional[int] = None,
+    kind: str = "url", payload: Optional[str] = None,
+) -> Job:
+    """kind 'url': url is the link. 'file': payload is the stored upload path. 'text': payload is the text."""
+    job = Job(user_id=user.id, url=url, kind=kind, payload=payload, chat_id=chat_id, status="queued")
     session.add(job)
     session.flush()
     return job
@@ -46,20 +52,44 @@ def summarize(result: ProcessResult) -> dict:
         "saved": [{"id": i.id, "title": i.title, "category": i.category, "kind": i.kind} for i in result.items],
         "duplicates": [{"id": i.id, "title": i.title} for i in result.duplicates],
         "signals": len(result.signals),
-        "rejected": result.rejected,
+        "approx": result.approx,
         "expired": result.expired,
         "creator": result.creator,
     }
 
 
+def _ingest_fn(job: Job):
+    if job.kind == "file":
+        return lambda _url: local_src.ingest_file(job.payload or "", name=job.url.removeprefix("file:"))
+    if job.kind == "text":
+        return lambda _url: local_src.ingest_text(job.payload or "")
+    return ingest_svc.ingest
+
+
+def _delete_upload(job: Job) -> None:
+    """Uploads are deleted as soon as they are read, whatever the outcome."""
+    if job.kind == "file" and job.payload:
+        try:
+            os.remove(job.payload)
+        except OSError:
+            pass
+
+
 def run_job(session: Session, job: Job, now: Optional[datetime] = None) -> dict:
     """Process one claimed job and record the outcome on it."""
+    try:
+        return _run_job(session, job, now)
+    finally:
+        _delete_upload(job)
+
+
+def _run_job(session: Session, job: Job, now: Optional[datetime] = None) -> dict:
     now = now or utcnow()
     user = session.get(User, job.user_id)
     try:
         result = process_url(
             session, user, job.url, now,
-            ingest_fn=ingest_svc.ingest,
+            ingest_fn=_ingest_fn(job),
             extract_fn=extract_svc.extract,
             geocode_place_fn=geo_svc.geocode_place,
             geocode_area_fn=geo_svc.geocode_area,

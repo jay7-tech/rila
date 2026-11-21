@@ -18,11 +18,26 @@
     <nav class="tabs" id="tabs" aria-label="Views"></nav>
   </header>
 
-  <section class="card" id="add" aria-label="Add a reel">
-    <form id="addform" class="addrow">
-      <label for="url" class="sr">Reel or short link</label>
-      <input id="url" type="url" inputmode="url" placeholder="Paste an Instagram reel or YouTube short link" required>
-      <button class="cta" type="submit" id="addbtn">Save it</button>
+  <section class="card" id="add" aria-label="Add something">
+    <div class="modes" role="group" aria-label="What are you adding?">
+      <button class="chip" type="button" data-mode="link" aria-pressed="true">Link</button>
+      <button class="chip" type="button" data-mode="file" aria-pressed="false">Video, audio or screenshot</button>
+      <button class="chip" type="button" data-mode="text" aria-pressed="false">Text</button>
+    </div>
+    <form id="addform" class="addrow" data-pane="link">
+      <label for="url" class="sr">Video link</label>
+      <input id="url" type="url" inputmode="url" placeholder="Paste an Instagram, YouTube, Facebook, X or TikTok link" required>
+      <button class="cta" type="submit">Save it</button>
+    </form>
+    <form id="fileform" class="addrow" data-pane="file" hidden>
+      <label for="file" class="sr">Video, audio clip or screenshot</label>
+      <input id="file" type="file" accept="video/*,audio/*,image/*" required>
+      <button class="cta" type="submit">Read it</button>
+    </form>
+    <form id="textform" class="addrow" data-pane="text" hidden>
+      <label for="text" class="sr">Text to read</label>
+      <textarea id="text" rows="3" minlength="10" maxlength="20000" placeholder="Paste a caption, message or post in any language" required></textarea>
+      <button class="cta" type="submit">Read it</button>
     </form>
     <p class="note" id="addmsg" role="status" aria-live="polite"></p>
   </section>

@@ -1,58 +1,105 @@
 # Rilla
 
-Rilla turns the reels you watch into a map of offers, places and live local conditions.
+Rilla turns the videos you watch into a map of offers, places and live local conditions.
 
-Forward an Instagram reel or YouTube short to the Telegram bot (or paste the link in the web app). Rilla reads the caption and speech, extracts what is on offer (venue, price, start and end time), finds it on the map, and brings it back when you are near or when it is about to end. Same-day reports about crowds, weather and closures are checked against each other and shown only when independent sources agree.
+Give it anything: a reel or short link, an uploaded video or audio clip, a screenshot, or pasted text, in any language. Rilla listens (language detected automatically), reads the words on screen, extracts what is on offer (venue, price, start and end time), checks every fact against a quote from the source, finds it on the map, and brings it back when you are near or when it is about to end.
 
 ## How it works
 
 ```
-Telegram bot ─┐                       ┌─ Postgres + PostGIS + pgvector (SQLite fallback)
-Web app (PWA) ┼─ FastAPI ─ job queue ─┤   users, items, signals, jobs, geocache
-              ┘            worker ────┘
-                             │  yt-dlp → captions or Whisper → Groq LLM → Nominatim → dedupe → save
+ link / video / audio / screenshot / text            Part 2 (in progress): map, remember, retrieve, recommend
+          |
+   sources/  safe link check, upload check, text
+          |
+   perception/  speech (Whisper, auto language) + frames -> de-duplicate -> OCR (Tesseract)
+          |
+   core/  VideoDocument: one timeline of caption, speech, on-screen text (with timestamps)
+          |
+   services/extract  LLM -> items + signals, each with a verbatim quote -> grounding check
+          |
+   services/process  geocode (English name) -> de-duplicate -> save item + evidence + document
 ```
 
+- `app/core/` the timeline model, Unicode-safe text helpers (Indic scripts), chunking, grounding
+- `app/perception/` ffprobe/ffmpeg, frame de-duplication, OCR, speech
+- `app/sources/` link validation (public hosts only), uploads and pasted text
 - `app/services/` ingest, extract, geocode, process, query, worker
-- `app/recs/` offer windows and the "near me" ranking (distance 45%, time left 30%, interests 20%, confidence 5%)
-- `app/signals/` freshness decay, multi-source confirmation, briefings
-- `app/api.py` REST API and web app hosting, `app/bot.py` Telegram bot
-- `web/` the installable web app (Leaflet map on OpenStreetMap)
+- `app/recs/` offer windows and the "near me" ranking
+- `app/signals/` freshness decay and multi-source confirmation
+- `app/evalkit/` and `eval/` labelled cases, precision/recall/F1, grounding rate, cached LLM runs
+- `app/cli.py` command line for running and testing without any chat app
+- `app/api.py` REST API and web app hosting, `app/bot.py` optional Telegram bot, `web/` the installable web app
 
-## Run with Docker (recommended)
+## Run with Docker
 
 ```
-copy .env.example .env      # fill in BOT_TOKEN, GROQ_API_KEY, POSTGRES_PASSWORD
-docker compose up --build -d
-docker compose logs -f
+copy .env.example .env        # set GROQ_API_KEY and POSTGRES_PASSWORD (BOT_TOKEN is optional)
+docker compose build
+docker compose up -d
+docker compose exec api python -m app.cli doctor        # checks every dependency
+docker compose exec api python -m app.cli make-user "Your Name"   # prints your sign-in link
 ```
 
-This starts Postgres (PostGIS + pgvector), applies migrations once, then runs the API/web app, the Telegram bot and a reel worker as separate containers. Add throughput with `docker compose up -d --scale worker=3`. Data lives in Docker volumes and survives restarts.
+Open the link. Add a video link, upload a file, paste a screenshot (Ctrl+V anywhere on the page) or paste text. On Android, open the app in Chrome, choose Install, and "Share to Rilla" appears in other apps' share sheets (iPhone does not support this yet; paste the link instead).
 
-Message your bot `/start`, forward a reel, then `/web` for your map link.
+After the first build, code, page and migration changes need only `docker compose restart api worker` (the override file mounts them). Rebuild only when `requirements.txt` or the `Dockerfile` change.
 
-## Quick run without Docker (SQLite fallback)
+## Try it from the command line
 
-Double-click `scripts\run_local.bat`. It runs everything in one process with a local SQLite file. Good for a quick try; use Docker for real testing.
+```
+docker compose exec api python -m app.cli read "https://www.youtube.com/shorts/..." 
+docker compose exec api python -m app.cli read /data/some_video.mp4 --no-llm     # perception only, no API key needed
+docker compose exec api python -m app.cli read "Free dosa at MTR this Sunday near Lalbagh"
+```
+
+`read` prints what was heard and seen (with timestamps) and what was extracted, and writes nothing to the database.
+
+## Measure it
+
+```
+docker compose exec api python -m app.cli capture 12     # save processed document 12 as a draft case in eval/cases/
+# watch the video, correct "expected" by hand, set "labeled": true
+docker compose exec api python -m app.cli eval --save   # precision, recall, F1, grounded rate; answers cached
+```
+
+See `eval/README.md`. Synthetic cases are included only to prove the harness works; they are never counted.
 
 ## Let testers in
 
-1. Set `INVITE_CODE=somesecret` in `.env`. Testers join with `https://t.me/<your_bot>?start=somesecret`.
-2. Give the web app a public address: `docker compose --profile public up -d`, then read the `https://...trycloudflare.com` address from `docker compose logs tunnel`. Put it in `PUBLIC_URL` and restart the app so `/web` links use it. The address changes each time the tunnel restarts.
+1. Set `INVITE_CODE=somesecret` in `.env`, then `docker compose up -d`. Testers sign up in the web app with that code.
+2. Give the web app a public address: `docker compose --profile public up -d`, read the `https://...trycloudflare.com` address from `docker compose logs tunnel`, and put it in `PUBLIC_URL`. The address changes each time the tunnel restarts.
 
 ## Tests
+
+Quick, no database server (SQLite):
 
 ```
 pip install -r requirements-dev.txt
 pytest
 ```
 
-Set `TEST_DATABASE_URL` to a PostGIS + pgvector database to also run the Postgres tests (CI does this).
+Against the real database (PostGIS + pgvector), inside Docker, on a throwaway database:
 
-## Known limits of this prototype
+```
+docker compose exec db psql -U rilla -d postgres -c "CREATE DATABASE rilla_test"
+docker compose exec db psql -U rilla -d rilla_test -c "CREATE EXTENSION IF NOT EXISTS postgis" -c "CREATE EXTENSION IF NOT EXISTS vector"
+docker compose --profile test run --rm tests
+```
 
-- `/search` is semantic (embeddings, first use downloads a ~130 MB model) plus keywords.
-- The Instagram downloader can be blocked by Instagram. Public YouTube shorts work without any login. Cookies from your own account help but can expire; never use an account you cannot lose.
-- Geocoding uses the public Nominatim service (1 request per second, cached). Heavy use needs a self-hosted instance.
-- Live conditions are shared across all users; saved items are private to each user.
-- Each worker processes one reel at a time; run more workers for more throughput.
+## Security notes
+
+- Links must be public addresses on the allowed video sites; private and internal addresses are refused.
+- Uploads are identified with ffprobe (not the file name), stored under random names, size-limited, and deleted as soon as they are read. Raw video is never kept; only the derived timeline and facts are.
+- Web sign-up is closed unless you set an invite code (or `OPEN_SIGNUP=1`); sign-up and submissions are rate limited.
+- Never commit `.env` or cookie files.
+
+## Known limits
+
+- Speech quality on Kannada and other Indian languages depends on the Whisper model size; `small` is fast but weaker. Measure with `eval` before changing `WHISPER_MODEL`.
+- Tesseract reads clean overlay text well but struggles with stylised fonts; a vision-model option is planned.
+- `/search` embeddings currently use an English model (bge-small-en-v1.5); a multilingual comparison is a planned stage.
+- Instagram can block the downloader. Public YouTube shorts work without a login. Never use a cookie account you cannot lose.
+- Geocoding uses public Nominatim (1 request per second, cached); an own place database (Overture) is planned.
+- Each worker processes one video at a time; run more workers for more throughput.
+
+The full architecture and roadmap is the "Rilla: Architecture and Build Roadmap" document.

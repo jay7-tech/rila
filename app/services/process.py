@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable, List, Optional
@@ -11,7 +10,8 @@ from rapidfuzz import fuzz
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import Item, Signal, User
+from ..core.text import normalize as _normalize
+from ..models import Document, Item, Signal, User
 from ..recs.ranking import haversine_m
 from ..signals.freshness import resolve_observed_at
 from . import users as users_svc
@@ -28,13 +28,13 @@ class ProcessResult:
     items: List[Item] = field(default_factory=list)
     duplicates: List[Item] = field(default_factory=list)
     signals: List[Signal] = field(default_factory=list)
-    rejected: List[str] = field(default_factory=list)
+    approx: List[str] = field(default_factory=list)  # real per the video, but only an area pin could be placed
     expired: List[str] = field(default_factory=list)  # offers whose window had already ended
     creator: Optional[str] = None
 
 
 def norm(text: Optional[str]) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", (text or "").lower())).strip()
+    return _normalize(text)  # Indic-safe: plain \w would strip Kannada/Hindi vowel signs
 
 
 def area_key(city: Optional[str], area: Optional[str]) -> str:
@@ -70,6 +70,16 @@ def process_url(
     ex: ExtractionResult = extract_fn(ing.caption, ing.transcript, now, ing.posted_at)
     out = ProcessResult(creator=ing.creator)
 
+    doc_row: Optional[Document] = None
+    if getattr(ing, "document", None) is not None:
+        d = ing.document
+        doc_row = Document(
+            user_id=user.id, kind=d.kind, source_url=url[:2000], language=d.language, duration=d.duration,
+            timeline=[sg.model_dump(mode="json") for sg in d.segments], meta=dict(d.meta or {}), created_at=now,
+        )
+        session.add(doc_row)
+        session.flush()
+
     existing = list(session.scalars(select(Item).where(Item.user_id == user.id)))
 
     for it in ex.items:
@@ -85,15 +95,16 @@ def process_url(
         geo = "none"
         where = ", ".join(x for x in (it.area, it.city) if x)
         if it.kind in ("place", "offer") and where:
-            name = it.venue or it.title
+            name = it.venue_en or it.venue or it.title  # the English spelling geocodes best
             if name:
                 lat, lon, st = geocode_place_fn(session, name, where)
-                if st == "rejected":
-                    out.rejected.append(name)
-                    continue  # name did not match anything real nearby
                 if st == "confirmed":
                     geo = "confirmed"
                 else:
+                    # The map did not know this exact name (common for small local places, or a different
+                    # spelling). The quote check already proved the video names it, so keep it with an
+                    # approximate pin on its area instead of losing it.
+                    out.approx.append(name)
                     lat, lon, st2 = geocode_area_fn(session, where)
                     geo = "approx" if st2 == "approx" else "none"
                     if geo == "none":
@@ -104,8 +115,15 @@ def process_url(
             kind=it.kind,
             category=it.category,
             title=it.title,
-            normalized=norm(it.venue or it.title) if it.kind != "offer" else norm(f"{it.venue or ''} {it.title}"),
+            normalized=norm(it.venue_en or it.venue or it.title) if it.kind != "offer"
+            else norm(f"{it.venue_en or it.venue or ''} {it.title}"),
             venue=it.venue,
+            venue_en=it.venue_en,
+            evidence=it.evidence,
+            evidence_source=it.evidence_source,
+            evidence_at=it.evidence_at,
+            grounded=it.grounded,
+            document_id=doc_row.id if doc_row else None,
             city=it.city,
             area=it.area,
             summary=it.summary,

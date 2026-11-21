@@ -6,6 +6,13 @@
   var state = { view: 'near', cat: 'all', radius: 3000, sel: null, items: [], loc: null, place: 'Gokarna', briefing: null, msg: '' };
   var token = null, map = null, layer = null, markers = {};
 
+  var share = null;
+  try {
+    var sp = new URLSearchParams(location.search);
+    var sUrl = sp.get('url'), sText = [sp.get('title'), sp.get('text')].filter(Boolean).join('\n');
+    if (sUrl || sText) { share = { url: sUrl || '', text: sText }; history.replaceState(null, '', location.pathname); }
+  } catch (e) { share = null; }
+
   try {
     var q = new URLSearchParams(location.search).get('t');
     if (q) { localStorage.setItem('rilla_token', q); history.replaceState(null, '', location.pathname); }
@@ -21,7 +28,7 @@
   function api(path, opts) {
     opts = opts || {};
     opts.headers = Object.assign({ 'X-Rilla-Token': token || '' }, opts.headers || {});
-    if (opts.body && typeof opts.body !== 'string') { opts.body = JSON.stringify(opts.body); opts.headers['Content-Type'] = 'application/json'; }
+    if (opts.body && typeof opts.body !== 'string' && !(opts.body instanceof FormData)) { opts.body = JSON.stringify(opts.body); opts.headers['Content-Type'] = 'application/json'; }
     return fetch(path, opts).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
         if (!r.ok) { var err = new Error(d.detail || 'Something went wrong'); err.status = r.status; throw err; }
@@ -33,11 +40,28 @@
   function note(t) { document.getElementById('addmsg').textContent = t || ''; }
 
   function showGate(text) {
-    document.querySelector('.wrap').textContent = '';
-    document.querySelector('.wrap').appendChild(el('div', { class: 'gate' }, [
+    var wrap = document.querySelector('.wrap'); wrap.textContent = '';
+    var box = el('div', { class: 'gate' }, [
       el('div', { class: 'brand' }, ['Ril', el('span', { text: 'l' }), 'a']),
-      el('p', { text: text }),
-      el('p', { class: 'note', text: 'In Telegram, message the Rilla bot and send /web.' })]));
+      el('p', { text: text })]);
+    wrap.appendChild(box);
+    fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) {
+      if (c.signup === 'closed') {
+        box.appendChild(el('p', { class: 'note', text: 'Sign-ups are closed. Ask the owner for your private link.' })); return;
+      }
+      var name = el('input', { type: 'text', placeholder: 'Your name', maxlength: '60', required: 'required', 'aria-label': 'Your name' });
+      var code = c.signup === 'invite' ? el('input', { type: 'text', placeholder: 'Invite code', maxlength: '100', required: 'required', 'aria-label': 'Invite code' }) : null;
+      var msg = el('p', { class: 'note', role: 'status' });
+      var form = el('form', { class: 'signup' }, [name, code, el('button', { class: 'cta', type: 'submit', text: 'Create my account' }), msg]);
+      form.onsubmit = function (e) {
+        e.preventDefault(); msg.textContent = 'Creating...';
+        api('/api/signup', { method: 'POST', body: { name: name.value.trim(), code: code ? code.value.trim() : '' } }).then(function (d) {
+          try { localStorage.setItem('rilla_token', d.token); if (share) sessionStorage.setItem('rilla_share', JSON.stringify(share)); } catch (e2) {}
+          location.reload();
+        }).catch(function (err) { msg.textContent = err.message; });
+      };
+      box.appendChild(form);
+    }).catch(function () {});
   }
 
   function renderTabs() {
@@ -62,7 +86,7 @@
     }
     req.then(function (d) { state.items = d.items; renderItems(); }).catch(fail);
   }
-  function fail(e) { if (e.status === 401) showGate('This link has expired or is incomplete.'); else note(e.message); }
+  function fail(e) { if (e.status === 401) showGate('Sign in to start saving what you watch.'); else note(e.message); }
 
   function renderLocate() {
     var L = document.getElementById('left'); L.textContent = '';
@@ -107,7 +131,7 @@
     }
     var items = state.items.filter(function (i) { return state.cat === 'all' || i.category === state.cat; });
     if (!items.length) {
-      L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Nothing here yet' }), el('span', { text: 'Paste a reel link above, or forward one to the Rilla bot on Telegram.' })]));
+      L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Nothing here yet' }), el('span', { text: 'Add a video link, a screenshot or some text above. On Android, install the app and use Share to Rilla.' })]));
     }
     var ul = el('ul', { class: 'list' });
     items.forEach(function (i) {
@@ -116,6 +140,9 @@
       var acts = el('span', { class: 'actions' });
       if (i.lat != null) acts.appendChild(el('a', { href: 'https://www.google.com/maps?q=' + i.lat + ',' + i.lon, target: '_blank', rel: 'noopener', text: 'Open in Maps' }));
       if (i.source_url) acts.appendChild(el('a', { href: i.source_url, target: '_blank', rel: 'noopener', text: 'Original reel' }));
+      var why = el('button', { class: 'ghost', type: 'button', text: 'Why this?' });
+      why.onclick = function (ev) { ev.stopPropagation(); toggleProof(i, why.closest('.rec')); };
+      acts.appendChild(why);
       var del = el('button', { class: 'ghost', type: 'button', text: 'Remove' });
       del.onclick = function (ev) { ev.stopPropagation(); api('/api/items/' + i.id, { method: 'DELETE' }).then(load).catch(fail); };
       acts.appendChild(del);
@@ -135,6 +162,28 @@
     });
     L.appendChild(ul);
     drawMap(items);
+  }
+
+  var SRC = { speech: 'spoken in the video', screen: 'shown on screen', caption: 'in the caption', text: 'in the text you pasted', multi: 'across a few lines' };
+  function clock(sec) { sec = Math.round(sec); return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2); }
+  function toggleProof(i, card) {
+    var old = card.querySelector('.proof');
+    if (old) { old.remove(); return; }
+    var p = el('div', { class: 'proof', role: 'region', 'aria-label': 'Where this came from' });
+    p.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    if (i.grounded === true && i.evidence) {
+      p.appendChild(el('span', {}, ['Found in the video, ' + (SRC[i.evidence_source] || 'in the source') + (i.evidence_at != null ? ' at ' + clock(i.evidence_at) : '') + ':']));
+      p.appendChild(el('q', { text: i.evidence }));
+    } else {
+      p.appendChild(el('span', { text: 'Rilla did not record an exact quote for this one, so it could not be checked against the video.' }));
+    }
+    if (i.venue_en && i.venue && i.venue_en !== i.venue) p.appendChild(el('span', { class: 'ctx', text: 'Name as written: ' + i.venue }));
+    card.appendChild(p);
+    if (i.evidence_at != null) {
+      api('/api/items/' + i.id + '/source').then(function (d) {
+        (d.around || []).forEach(function (sg) { p.appendChild(el('span', { class: 'ctx', text: clock(sg.start) + ' ' + sg.source + ': ' + sg.text })); });
+      }).catch(function () {});
+    }
   }
 
   function drawMap(items) {
@@ -191,25 +240,55 @@
     }).catch(fail);
   }
 
-  // add a reel
+  // add something: link, file or screenshot, or text
+  function busy(on) { Array.prototype.forEach.call(document.querySelectorAll('#add .cta'), function (b) { b.disabled = on; }); }
+  function startJob(request, what) {
+    busy(true); note('Sending...');
+    request.then(function (d) { note('Reading ' + what + '. This can take a minute or two.'); poll(d.job_id, 0); })
+      .catch(function (err) { busy(false); note(err.message); });
+  }
+  function submitLink(url) { startJob(api('/api/submit', { method: 'POST', body: { url: url } }), 'the video'); }
+  function submitText(text) { startJob(api('/api/submit/text', { method: 'POST', body: { text: text } }), 'the text'); }
+  function submitFile(file) {
+    var fd = new FormData(); fd.append('file', file, file.name || 'screenshot.png');
+    startJob(api('/api/submit/file', { method: 'POST', body: fd }), 'the file');
+  }
   document.getElementById('addform').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var input = document.getElementById('url'), btn = document.getElementById('addbtn');
-    btn.disabled = true; note('Sending...');
-    api('/api/submit', { method: 'POST', body: { url: input.value.trim() } }).then(function (d) {
-      input.value = ''; note('Reading the reel. This usually takes under a minute.'); poll(d.job_id, 0);
-    }).catch(function (err) { btn.disabled = false; note(err.message); });
+    e.preventDefault(); var i = document.getElementById('url'); var v = i.value.trim(); i.value = ''; submitLink(v);
   });
+  document.getElementById('textform').addEventListener('submit', function (e) {
+    e.preventDefault(); var i = document.getElementById('text'); var v = i.value.trim(); i.value = ''; submitText(v);
+  });
+  document.getElementById('fileform').addEventListener('submit', function (e) {
+    e.preventDefault(); var i = document.getElementById('file'); if (i.files && i.files[0]) { submitFile(i.files[0]); i.value = ''; }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#add [data-mode]'), function (b) {
+    b.onclick = function () {
+      Array.prototype.forEach.call(document.querySelectorAll('#add [data-mode]'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      Array.prototype.forEach.call(document.querySelectorAll('#add [data-pane]'), function (f) { f.hidden = f.getAttribute('data-pane') !== b.getAttribute('data-mode'); });
+    };
+  });
+  // paste a screenshot straight from the clipboard
+  document.addEventListener('paste', function (e) {
+    var items = (e.clipboardData && e.clipboardData.items) || [];
+    for (var k = 0; k < items.length; k++) {
+      if (items[k].kind === 'file' && /^image\//.test(items[k].type)) { var f = items[k].getAsFile(); if (f) { e.preventDefault(); submitFile(f); return; } }
+    }
+  });
+  // "Share to Rilla" from another app's share sheet (installed PWA on Android Chrome)
+  function handleShare(sh) {
+    var m = (sh.url || sh.text || '').match(/https?:\/\/[^\s]+/);
+    if (m) submitLink(m[0]); else if ((sh.text || '').length >= 10) submitText(sh.text);
+  }
   function poll(id, n) {
-    var btn = document.getElementById('addbtn');
-    if (n > 80) { btn.disabled = false; note('Still working. It will appear in All saved when done.'); return; }
+    if (n > 120) { busy(false); note('Still working. It will appear in All saved when done.'); return; }
     setTimeout(function () {
       api('/api/jobs/' + id).then(function (j) {
         if (j.status === 'done') {
-          btn.disabled = false; var r = j.result || {};
-          note((r.saved && r.saved.length) ? 'Saved ' + r.saved.length + ': ' + r.saved.map(function (s) { return s.title; }).join(', ') : (r.duplicates && r.duplicates.length ? 'Already on your map.' : 'Nothing specific to save in that reel.'));
+          busy(false); var r = j.result || {};
+          note((r.saved && r.saved.length) ? 'Saved ' + r.saved.length + ': ' + r.saved.map(function (s) { return s.title; }).join(', ') : (r.duplicates && r.duplicates.length ? 'Already on your map.' : 'Nothing specific to save in that.'));
           load();
-        } else if (j.status === 'failed') { btn.disabled = false; note(j.error || 'That reel could not be read.'); }
+        } else if (j.status === 'failed') { busy(false); note(j.error || 'That could not be read.'); }
         else poll(id, n + 1);
       }).catch(function () { poll(id, n + 1); });
     }, 3000);
@@ -217,10 +296,13 @@
 
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
 
-  if (!token) { showGate('Open Rilla from the link the Telegram bot sends you.'); return; }
+  if (!token) { showGate('Rilla turns the videos you watch into places and offers on your own map.'); return; }
   api('/api/me').then(function (me) {
     if (me.location) state.loc = me.location;
     state.view = state.loc ? 'near' : 'all';
     load();
+    var pending = share;
+    try { var stored = sessionStorage.getItem('rilla_share'); if (!pending && stored) pending = JSON.parse(stored); sessionStorage.removeItem('rilla_share'); } catch (e) {}
+    if (pending) handleShare(pending);
   }).catch(fail);
 })();

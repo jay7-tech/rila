@@ -15,10 +15,10 @@ from .models import Item, Job, User, utcnow
 from .services import query as q
 from .services import users as users_svc
 from .services.worker import enqueue
+from .sources.safeurl import UrlRejected, validate_url
 
 log = logging.getLogger(__name__)
 URL_RE = re.compile(r"https?://[^\s]+")
-ALLOWED_HOSTS = ("instagram.com", "youtube.com", "youtu.be")
 JOINED_KEY = "rilla_joined"
 
 
@@ -65,7 +65,12 @@ async def web(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    urls = [u for u in URL_RE.findall(update.message.text or "") if any(h in u.lower() for h in ALLOWED_HOSTS)]
+    urls = []
+    for u in URL_RE.findall(update.message.text or ""):
+        try:
+            urls.append(validate_url(u, get_settings().allowed_hosts))
+        except UrlRejected:
+            continue
     with SessionLocal() as session:
         user = await _user_or_deny(update, context, session)
         if not user:

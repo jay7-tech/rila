@@ -57,8 +57,8 @@ def saved_summary(summary: dict) -> str:
         parts += [f"- {d['title']}" for d in dups]
     if summary.get("signals"):
         parts.append(f"Added {summary['signals']} live report(s) about conditions nearby.")
-    if summary.get("rejected"):
-        parts.append("Skipped (could not find on the map): " + ", ".join(summary["rejected"]))
+    if summary.get("approx"):
+        parts.append("Pinned approximately (exact spot not found on the map): " + ", ".join(summary["approx"]))
     if summary.get("expired"):
         parts.append("Skipped (already ended): " + ", ".join(summary["expired"]))
     if not parts:

@@ -41,10 +41,10 @@ def test_saves_offer_with_window_and_pin(session, user):
     assert user.interests["food"] > 0
 
 
-def test_rejected_name_is_not_saved(session, user):
-    res = run(session, user, [offer(venue="Made Up Cafe")], geo=lambda s, n, w: (None, None, "rejected"))
-    assert res.items == [] and res.rejected == ["Made Up Cafe"]
-    assert session.scalars(select(Item)).all() == []
+def test_unknown_name_is_saved_with_an_approximate_area_pin(session, user):
+    res = run(session, user, [offer(venue="Small Local Cafe")], geo=lambda s, n, w: (None, None, "rejected"))
+    assert [i.title for i in res.items] and res.approx == ["Small Local Cafe"]
+    assert res.items[0].geo_status in ("approx", "none")
 
 
 def test_unknown_place_falls_back_to_area_pin(session, user):

@@ -32,6 +32,21 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class Document(Base):
+    """What Rilla perceived in one input: the full timeline of caption, speech and on-screen text."""
+
+    __tablename__ = "documents"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(8), default="video")  # video | audio | image | text
+    source_url: Mapped[str] = mapped_column(Text, default="")
+    language: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    duration: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    timeline: Mapped[list] = mapped_column(JSON, default=list)  # list of Segment dicts
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)  # model names, frame counts, prompt version
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class Item(Base):
     """Something saved from a reel: a place, an offer, or non-physical info."""
 
@@ -59,6 +74,13 @@ class Item(Base):
     embedding: Mapped[Optional[list]] = mapped_column(EmbeddingType, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     visited: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Where in the video this came from, so every fact can be checked against its source.
+    venue_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    evidence: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    evidence_source: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)  # speech|screen|text|caption|multi
+    evidence_at: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # seconds into the video
+    grounded: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    document_id: Mapped[Optional[int]] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"), nullable=True, index=True)
 
     __table_args__ = (Index("ix_items_user_geo", "user_id", "lat", "lon"),)
 
@@ -89,7 +111,9 @@ class Job(Base):
     __tablename__ = "jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    url: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text)  # the link, or a label like 'file:menu.jpg' / 'text'
+    kind: Mapped[str] = mapped_column(String(8), default="url")  # url | file | text
+    payload: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # upload path (file) or pasted text (text)
     status: Mapped[str] = mapped_column(String(12), default="queued", index=True)  # queued|running|done|failed
     chat_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)  # Telegram chat to notify
     result: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)

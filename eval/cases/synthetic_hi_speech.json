@@ -1,0 +1,21 @@
+{
+  "id": "synthetic_hi_speech",
+  "synthetic": true,
+  "note": "Harness smoke test written by hand; not a real reel.",
+  "language": "hi",
+  "now": "2026-10-22T12:00:00",
+  "caption": "",
+  "transcript": "[0:02 speech] आज इंदिरानगर में नया बिरयानी हब खुला है\n[0:06 speech] मेघना फूड्स में सिर्फ़ 99 रुपये में फुल प्लेट",
+  "expected": {
+    "items": [
+      {
+        "kind": "place",
+        "venue": "मेघना फूड्स",
+        "names": [
+          "Meghana Foods"
+        ],
+        "city": "Bengaluru"
+      }
+    ]
+  }
+}

@@ -81,7 +81,7 @@ def run_migrations(url: str) -> None:
 def reset_postgres() -> None:
     """Test helper: empty every table (keeps schema)."""
     with _engine.begin() as c:
-        c.execute(text("TRUNCATE users, items, signals, jobs, geocache RESTART IDENTITY CASCADE"))
+        c.execute(text("TRUNCATE users, documents, items, signals, jobs, geocache RESTART IDENTITY CASCADE"))
 
 
 @contextmanager
