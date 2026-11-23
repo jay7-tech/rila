@@ -129,3 +129,16 @@ class GeoCache(Base):
     lon: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Event(Base):
+    """Something the user did with an item (like, dismiss, visit, open). Denormalised so it outlives the item."""
+
+    __tablename__ = "events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    item_id: Mapped[Optional[int]] = mapped_column(ForeignKey("items.id", ondelete="SET NULL"), nullable=True, index=True)
+    action: Mapped[str] = mapped_column(String(12))  # like | dismiss | visit | open
+    category: Mapped[Optional[str]] = mapped_column(String(24), nullable=True)
+    creator: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)

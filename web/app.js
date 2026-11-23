@@ -2,8 +2,8 @@
   'use strict';
   var CATS = { food: 'Food', store: 'Stores', event: 'Events', education: 'Learning', scheme: 'Schemes', service: 'Services', attraction: 'Places', other: 'Other' };
   var LABEL = { hazard: 'Hazard', weather: 'Weather on the ground', crowd: 'Crowd', traffic: 'Traffic', closure: 'Closed', opening: 'Open', deal: 'Deal', event: 'Event', price: 'Price' };
-  var TABS = [['near', 'Near me'], ['all', 'All saved'], ['live', 'Live conditions']];
-  var state = { view: 'near', cat: 'all', radius: 3000, sel: null, items: [], loc: null, place: 'Gokarna', briefing: null, msg: '' };
+  var TABS = [['near', 'Near me'], ['plan', 'Plan'], ['places', 'Places'], ['all', 'All saved'], ['live', 'Live conditions'], ['you', 'You']];
+  var state = { view: 'near', cat: 'all', radius: 3000, sel: null, items: [], loc: null, place: 'Gokarna', briefing: null, msg: '', minutes: 180, plan: null, places: [] };
   var token = null, map = null, layer = null, markers = {};
 
   var share = null;
@@ -76,6 +76,9 @@
   function load() {
     renderTabs();
     if (state.view === 'live') { renderLive(); return; }
+    if (state.view === 'you') { renderYou(); return; }
+    if (state.view === 'plan') { loadPlan(); return; }
+    if (state.view === 'places') { loadPlaces(); return; }
     var req;
     if (state.view === 'near') {
       if (!state.loc) { renderLocate(); return; }
@@ -138,11 +141,26 @@
       var soon = i.status === 'ending_soon';
       var meta = [i.price, i.when, i.distance_m != null ? km(i.distance_m) : null, i.creator ? 'from ' + i.creator : null].filter(Boolean);
       var acts = el('span', { class: 'actions' });
-      if (i.lat != null) acts.appendChild(el('a', { href: 'https://www.google.com/maps?q=' + i.lat + ',' + i.lon, target: '_blank', rel: 'noopener', text: 'Open in Maps' }));
+      var mapsQ = [i.venue_en || i.venue || i.title, i.area, i.city].filter(Boolean).join(', ');
+      if (i.lat != null || mapsQ) {
+        // an approximate pin is only the middle of the area, so search by name instead
+        var href = (i.geo === 'confirmed' && i.lat != null) ? 'https://www.google.com/maps?q=' + i.lat + ',' + i.lon : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapsQ);
+        acts.appendChild(el('a', { href: href, target: '_blank', rel: 'noopener', text: 'Open in Maps' }));
+      }
       if (i.source_url) acts.appendChild(el('a', { href: i.source_url, target: '_blank', rel: 'noopener', text: 'Original reel' }));
       var why = el('button', { class: 'ghost', type: 'button', text: 'Why this?' });
       why.onclick = function (ev) { ev.stopPropagation(); toggleProof(i, why.closest('.rec')); };
       acts.appendChild(why);
+      [['Like', 'like', 'Noted'], ['I went', 'visit', 'Marked as visited'], ['Not for me', 'dismiss', 'Hidden']].forEach(function (f) {
+        var fbtn = el('button', { class: 'ghost', type: 'button', text: f[0] });
+        fbtn.onclick = function (ev) {
+          ev.stopPropagation(); fbtn.disabled = true;
+          api('/api/items/' + i.id + '/feedback', { method: 'POST', body: { action: f[1] } }).then(function () {
+            fbtn.textContent = f[2]; if (f[1] !== 'like') setTimeout(load, 400);
+          }).catch(function (err) { fbtn.disabled = false; fail(err); });
+        };
+        acts.appendChild(fbtn);
+      });
       var del = el('button', { class: 'ghost', type: 'button', text: 'Remove' });
       del.onclick = function (ev) { ev.stopPropagation(); api('/api/items/' + i.id, { method: 'DELETE' }).then(load).catch(fail); };
       acts.appendChild(del);
@@ -216,6 +234,112 @@
     lg.appendChild(el('span', { text: 'Red ring = ends within 48 hours' }));
   }
   function focusMarker() { var m = markers[state.sel]; if (m && map) { map.panTo(m.getLatLng()); m.openPopup(); } }
+
+
+  function mapsHref(name, area, city, lat, lon, geo) {
+    var q = [name, area, city].filter(Boolean).join(', ');
+    return (geo === 'confirmed' && lat != null) ? 'https://www.google.com/maps?q=' + lat + ',' + lon : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+  }
+  function hm(iso) { var d = new Date(iso); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+
+  // Places: the same venue seen in several reels, merged
+  function loadPlaces() {
+    var p = state.loc ? '?lat=' + state.loc.lat + '&lon=' + state.loc.lon : '';
+    api('/api/places' + p).then(function (d) { state.places = d.places; renderPlaces(); }).catch(fail);
+  }
+  function renderPlaces() {
+    var L = document.getElementById('left'); L.textContent = '';
+    L.appendChild(el('div', {}, [el('h1', { text: 'Your places' }), el('p', { class: 'sub', text: 'One card per venue. The more independent reels mention it, the more Rilla trusts it.' })]));
+    if (!state.places.length) L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'No places yet' }), el('span', { text: 'Save a few reels and the venues they mention will gather here.' })]));
+    var ul = el('ul', { class: 'list' });
+    state.places.forEach(function (pl) {
+      var meta = [pl.area, pl.city].filter(Boolean).join(', ') + (pl.geo === 'approx' ? ' (approximate pin)' : '');
+      var facts = [pl.reels + (pl.reels === 1 ? ' reel' : ' reels'), pl.creators.length ? 'by ' + pl.creators.join(', ') : null, pl.prices.length ? pl.prices.join(' / ') : null,
+        pl.distance_m != null ? km(pl.distance_m) : null].filter(Boolean);
+      var acts = el('span', { class: 'actions' }, [el('a', { href: mapsHref(pl.name, pl.area, pl.city, pl.lat, pl.lon, pl.geo), target: '_blank', rel: 'noopener', text: 'Open in Maps' })]);
+      if (pl.best_evidence && pl.best_evidence.url) acts.appendChild(el('a', { href: pl.best_evidence.url, target: '_blank', rel: 'noopener', text: 'Best reel' }));
+      var card = el('div', { class: 'rec' }, [
+        el('span', { class: 'row1' }, [el('span', { class: 'tag' }, [el('i', { style: 'background:var(--c-' + (pl.categories[0] || 'other') + ')' }), CATS[pl.categories[0]] || 'Other']),
+          el('span', { class: 'left', text: Math.round(pl.confidence * 100) + '% sure' })]),
+        el('span', { class: 'ttl', text: pl.name }),
+        meta ? el('span', { class: 'meta', text: meta }) : null,
+        el('span', { class: 'meta', text: facts.join(' · ') }),
+        pl.live_offers.length ? el('span', { class: 'why', text: 'Live offer: ' + pl.live_offers.map(function (o) { return o.title; }).join(', ') }) : null,
+        pl.best_evidence ? el('span', { class: 'proof' }, ['Proof (' + (SRC[pl.best_evidence.source] || 'in the source') + '): ', el('q', { text: pl.best_evidence.quote })]) : null,
+        acts]);
+      ul.appendChild(el('li', {}, [card]));
+    });
+    L.appendChild(ul);
+    drawMap(state.places.map(function (pl, n) { return { id: 'p' + n, title: pl.name, category: pl.categories[0] || 'other', status: pl.live_offers.length ? 'active' : 'open_ended', time_left: pl.reels + ' reel(s)', lat: pl.geo === 'none' ? null : pl.lat, lon: pl.lon }; }));
+  }
+
+  // Plan: an ordered outing that fits the time you have
+  function loadPlan() {
+    if (!state.loc) { renderLocate(); return; }
+    api('/api/plan?lat=' + state.loc.lat + '&lon=' + state.loc.lon + '&minutes=' + state.minutes).then(function (d) { state.plan = d; renderPlan(); }).catch(fail);
+  }
+  function renderPlan() {
+    var L = document.getElementById('left'); L.textContent = '';
+    var d = state.plan;
+    L.appendChild(el('div', {}, [el('h1', { text: 'Plan my outing' }), el('p', { class: 'sub', text: 'Your saved places, ordered so you can fit the most in the time you have. Times are estimates.' })]));
+    var f = el('div', { class: 'filters', role: 'group', 'aria-label': 'Time available' });
+    [[60, '1 hour'], [120, '2 hours'], [180, '3 hours'], [300, '5 hours']].forEach(function (x) {
+      var b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.minutes === x[0]), text: x[1] });
+      b.onclick = function () { state.minutes = x[0]; loadPlan(); }; f.appendChild(b);
+    });
+    L.appendChild(f);
+    if (!d.stops.length) {
+      L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Nothing fits yet' }), el('span', { text: 'Try more time, or save places near you. Visited and hidden places are left out.' })]));
+      drawMap([]); return;
+    }
+    L.appendChild(el('p', { class: 'note', text: d.stops.length + ' stops, about ' + Math.round(d.total_minutes) + ' minutes in all (' + Math.round(d.travel_minutes) + ' travelling).' + (d.skipped ? ' ' + d.skipped + ' did not fit.' : '') }));
+    var ol = el('ol', { class: 'list plan' });
+    d.stops.forEach(function (s, n) {
+      var acts = el('span', { class: 'actions' }, [el('a', { href: mapsHref(s.venue || s.title, s.area, null, s.lat, s.lon, 'confirmed'), target: '_blank', rel: 'noopener', text: 'Directions' })]);
+      ol.appendChild(el('li', {}, [el('div', { class: 'rec' }, [
+        el('span', { class: 'row1' }, [el('span', { class: 'tag' }, [el('i', { style: 'background:var(--c-' + (s.category || 'other') + ')' }), (n + 1) + '. ' + (CATS[s.category] || 'Other')]),
+          el('span', { class: 'left', text: hm(s.arrive) + ' to ' + hm(s.depart) })]),
+        el('span', { class: 'ttl', text: s.title }),
+        el('span', { class: 'meta', text: [s.venue, s.area].filter(Boolean).join(', ') }),
+        el('span', { class: 'meta', text: (s.travel_min ? Math.round(s.travel_min) + ' min to get there' : 'start here') + (s.wait_min > 1 ? ', wait ' + Math.round(s.wait_min) + ' min for it to open' : '') + ', stay about ' + s.stay_min + ' min' + (s.ends_at ? ', offer ends ' + hm(s.ends_at) : '') }),
+        acts])]));
+    });
+    L.appendChild(ol);
+    drawMap(d.stops.map(function (s) { return { id: s.id, title: (s.title), category: s.category || 'other', status: 'active', time_left: hm(s.arrive), lat: s.lat, lon: s.lon }; }));
+  }
+
+  // You: what Rilla has learned, in the open
+  function renderYou() {
+    var L = document.getElementById('left'); L.textContent = '';
+    document.getElementById('mapcard').hidden = true;
+    L.appendChild(el('div', {}, [el('h1', { text: 'What Rilla has learned' }), el('p', { class: 'sub', text: 'From what you save, like, visit and hide. Nothing is hidden from you, and it never leaves your account.' })]));
+    Promise.all([api('/api/me/interests'), api('/api/creators')]).then(function (r) {
+      var rows = r[0].interests.filter(function (x) { return x.evidence > 0 || x.saved > 0; });
+      if (!rows.length) L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Not enough yet' }), el('span', { text: 'Like, visit or hide a few places and your tastes show up here.' })]));
+      else {
+        L.appendChild(el('h2', { class: 'h2', text: 'Your interests' }));
+        var ul = el('ul', { class: 'list' });
+        rows.forEach(function (x) {
+          ul.appendChild(el('li', {}, [el('div', { class: 'bars' }, [
+            el('span', { class: 'bl', text: CATS[x.category] || x.category }),
+            el('span', { class: 'track' }, [el('span', { class: 'fill', style: 'width:' + Math.round(x.interest * 100) + '%' })]),
+            el('span', { class: 'bv', text: Math.round(x.interest * 100) + '%' })])]));
+        });
+        L.appendChild(ul);
+      }
+      var cs = r[1].creators;
+      if (cs.length) {
+        L.appendChild(el('h2', { class: 'h2', text: 'Creators you save from' }));
+        var cl = el('ul', { class: 'list' });
+        cs.forEach(function (c) {
+          cl.appendChild(el('li', {}, [el('div', { class: 'rec' }, [
+            el('span', { class: 'row1' }, [el('span', { class: 'ttl', text: c.creator }), el('span', { class: 'left', text: Math.round(c.trust * 100) + '% reliable' })]),
+            el('span', { class: 'meta', text: c.reels + ' reels, ' + c.grounded + ' places checked in the video, ' + c.dropped + ' dropped as not in the video' + (c.likes + c.visits ? ', ' + (c.likes + c.visits) + ' liked or visited' : '') + (c.dismissals ? ', ' + c.dismissals + ' hidden' : '') })])]));
+        });
+        L.appendChild(cl);
+      }
+    }).catch(fail);
+  }
 
   function renderLive() {
     var L = document.getElementById('left'); L.textContent = '';

@@ -34,6 +34,12 @@ def _load(name: str):
     return _model
 
 
+def too_sparse(text: str, start: float, end: float) -> bool:
+    """A long segment with almost no text (e.g. 22 s holding '12 o o') is invented filler, not speech."""
+    duration = (end or 0.0) - (start or 0.0)
+    return duration >= 8.0 and len("".join(text.split())) / duration < 1.0
+
+
 def is_hallucination(avg_logprob: float, no_speech_prob: float) -> bool:
     """Whisper invents text over music and silence; those segments score low on both."""
     return no_speech_prob > 0.8 and avg_logprob < -1.0
@@ -56,7 +62,7 @@ def transcribe_local(path: str, language: Optional[str] = None, hint: Optional[s
     segs: List[Segment] = []
     for r in raw:
         text = r.text.strip()
-        if not text or is_hallucination(r.avg_logprob, r.no_speech_prob):
+        if not text or is_hallucination(r.avg_logprob, r.no_speech_prob) or too_sparse(text, float(r.start), float(r.end)):
             continue
         segs.append(Segment(source="speech", text=text, start=float(r.start), end=float(r.end), lang=detected))
     return segs, detected
@@ -98,7 +104,8 @@ def transcribe_groq(path: str, language: Optional[str] = None, hint: Optional[st
     segs: List[Segment] = []
     for r in _field(resp, "segments", None) or []:
         text = (_field(r, "text") or "").strip()
-        if not text or is_hallucination(_field(r, "avg_logprob", 0.0) or 0.0, _field(r, "no_speech_prob", 0.0) or 0.0):
+        if not text or is_hallucination(_field(r, "avg_logprob", 0.0) or 0.0, _field(r, "no_speech_prob", 0.0) or 0.0) \
+                or too_sparse(text, float(_field(r, "start", 0.0) or 0.0), float(_field(r, "end", 0.0) or 0.0)):
             continue
         segs.append(Segment(source="speech", text=text, start=float(_field(r, "start", 0.0)), end=float(_field(r, "end", 0.0)),
                             lang=detected))

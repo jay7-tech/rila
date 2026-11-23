@@ -3,7 +3,7 @@
   "labeled": false,
   "source": "https://youtube.com/shorts/WTs8kxPt6F4",
   "language": "Hindi",
-  "now": "2026-11-21T15:51:31",
+  "now": "2026-11-23T08:31:02",
   "posted_at": "2025-09-08T07:45:02",
   "caption": "In this Shorts video, Backpacker Indian is sharing Bangalore Street Food under 50 rupees. While roaming in the morning, Arpit found out there are good hygienic breakfast places in the city who serves food under 50 rupees. From Idli, Vada to Filter Coffee, this Street side spot has everything. Watch till the end of the shorts to know honest review about this budget friendly breakfast.\n\nLocation: By2Coffee, Bengaluru, Karnataka",
   "transcript": "[0:00-0:03 speech] and now I don't like every meal without filter coffee\n[0:01-0:02 screen] br’ ಈ\n[0:03-0:06 speech] so the thing is I want to have breakfast under 50 rupees in Bangalore\n[0:06-0:07 speech] come I will make you do it\n[0:06-0:07 screen] Stal\n[0:06-0:07 screen] You\n[0:07-0:09 speech] first I will put the list in the queue and send it to you\n[0:09-0:12 speech] and listen, it is not like that if the price is less then the size of idli vada will be smaller\n[0:09-0:10 screen] ತ್ರಾ ೬\n[0:12-0:13 speech] no no no\n[0:12-0:13 screen] Bangalore =.\n[0:12-0:13 screen] Under 50 Rupee:\n[0:13-0:15 speech] full size vada and full size idli combination is there boss\n[0:15-0:18 speech] in which idli is soft and melts in the mouth\n[0:18-0:23 speech] and vada is crispy and if there is coconut chutney then sambar is also not required\n[0:23-0:25 speech] now the food is in rupees 30\n[0:23-0:24 screen] ഞ്ഞ\n[0:24-0:25 screen] ತೌ ആം\n[0:25-0:27 speech] now let's cut another list of 15 rupees\n[0:26-0:27 screen] COFFEE\n[0:27-0:29 speech] yes, it will cost more than 2-3 rupees from my budget\n[0:29-0:32 speech] Subscribe for more videos",
@@ -13,7 +13,7 @@
         "kind": "place",
         "venue": "By2Coffee",
         "names": [
-          "Budget breakfast under 50 rupees (idli, vada, coffee)"
+          "Budget breakfast under 50 rupees"
         ],
         "city": "Bengaluru"
       }
@@ -23,17 +23,16 @@
     {
       "kind": "place",
       "category": "food",
-      "title": "Budget breakfast under 50 rupees (idli, vada, coffee)",
+      "title": "Budget breakfast under 50 rupees",
       "venue": "By2Coffee",
       "venue_en": "By2Coffee",
       "city": "Bengaluru",
-      "summary": "By2Coffee offers a full‑size idli‑vada combo for about 30 rupees and filter coffee for 2‑3 rupees, keeping the total breakfast under 50 rupees.",
-      "price_text": "≈30 rupees for food, 2‑3 rupees for coffee",
-      "evidence": "now the food is in rupees 30",
-      "evidence_source": "speech",
-      "evidence_at": 23.0,
+      "summary": "By2Coffee offers hygienic breakfast items like idli, vada and filter coffee for under 50 rupees each.",
+      "price_text": "under 50 rupees",
+      "evidence": "Location: By2Coffee, Bengaluru, Karnataka",
+      "evidence_source": "caption",
       "grounded": true,
-      "confidence": 0.92
+      "confidence": 0.78
     }
   ],
   "ungrounded_dropped": 0

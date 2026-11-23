@@ -48,9 +48,12 @@ services:
     depends_on:
       migrate: {condition: service_completed_successfully}
 
+  # Telegram is optional: started only when BOT_TOKEN is set (.\rilla up does this), or by hand with
+  #   docker compose --profile telegram up -d bot
   bot:
     <<: *app
     command: ["bot"]
+    profiles: ["telegram"]
     depends_on:
       migrate: {condition: service_completed_successfully}
 

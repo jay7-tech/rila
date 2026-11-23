@@ -75,7 +75,9 @@ def process_url(
         d = ing.document
         doc_row = Document(
             user_id=user.id, kind=d.kind, source_url=url[:2000], language=d.language, duration=d.duration,
-            timeline=[sg.model_dump(mode="json") for sg in d.segments], meta=dict(d.meta or {}), created_at=now,
+            timeline=[sg.model_dump(mode="json") for sg in d.segments],
+            meta={**dict(d.meta or {}), "creator": ing.creator, "kept": len(ex.items), "ungrounded_dropped": int(ex.stats.get("ungrounded_dropped", 0))},
+            created_at=now,
         )
         session.add(doc_row)
         session.flush()

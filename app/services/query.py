@@ -8,13 +8,16 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from .. import db as dbmod
-from ..models import Item, Signal, User
+from ..models import Event, Item, Signal, User
+from ..recs import learner
 from ..recs.offers import Offer, status, time_left_label
+from ..recs import planner
 from ..recs.ranking import haversine_m, recommend
 from ..signals.aggregate import build_consensus
 from ..signals.briefing import format_briefing
 from ..signals.freshness import age_label
 from ..signals.models import Signal as SignalModel
+from . import creators as creators_svc
 from . import embeddings
 from .process import norm
 
@@ -28,7 +31,7 @@ def item_to_offer(item: Item) -> Offer:
         id=item.id, title=item.title, category=item.category, city=item.city, lat=item.lat, lon=item.lon,
         summary=item.summary, price_text=item.price_text, starts_at=item.starts_at, ends_at=item.ends_at,
         duration_text=item.duration_text, source_url=item.source_url, confidence=item.confidence,
-        saved_at=item.created_at,
+        saved_at=item.created_at, creator=item.creator,
     )
 
 
@@ -74,16 +77,50 @@ def nearby_candidates(session: Session, user: User, lat: float, lon: float, radi
     return list(session.scalars(select(Item).where(Item.id.in_(ids))))
 
 
+def user_events(session: Session, user: User, limit: int = 2000) -> List[Event]:
+    return list(session.scalars(select(Event).where(Event.user_id == user.id).order_by(Event.id.desc()).limit(limit)))
+
+
+def learned_interests(user: User, events: List[Event], now: datetime, categories=()) -> dict:
+    obs = [(e.action, e.category, e.created_at) for e in events]
+    return learner.effective_interests(user.interests or {}, obs, now, categories)
+
+
 def recommend_for_user(
     session: Session, user: User, lat: float, lon: float, now: datetime,
     radius_m: float = 3000, category: Optional[str] = None, limit: int = 10,
 ) -> List[dict]:
     items = {i.id: i for i in nearby_candidates(session, user, lat, lon, radius_m)}
+    events = user_events(session, user)
+    dismissed = {e.item_id for e in events if e.action == "dismiss" and e.item_id}
+    offers = [item_to_offer(i) for i in items.values() if i.id not in dismissed]  # "not interested" means gone
     recs = recommend(
-        [item_to_offer(i) for i in items.values()], lat, lon, now,
-        interests=user.interests or {}, radius_m=radius_m, query_category=category, limit=limit,
+        offers, lat, lon, now,
+        interests=learned_interests(user, events, now, {i.category for i in items.values()}),
+        radius_m=radius_m, query_category=category, limit=limit, trust=creators_svc.trust_map(session, user, now, events),
     )
     return [serialize_item(items[r.offer.id], now, r.distance_m, r.reasons, r.label) for r in recs]
+
+
+def plan_for_user(
+    session: Session, user: User, lat: float, lon: float, now: datetime, minutes: float = 180.0,
+    mode: str = "auto", category: Optional[str] = None, radius_m: float = 6000,
+) -> dict:
+    """Order the user's best nearby saved places into a route that fits `minutes`."""
+    items = {i.id: i for i in nearby_candidates(session, user, lat, lon, radius_m)}
+    events = user_events(session, user)
+    dismissed = {e.item_id for e in events if e.action == "dismiss" and e.item_id}
+    visited = {i.id for i in items.values() if i.visited}
+    offers = [item_to_offer(i) for i in items.values() if i.id not in dismissed and i.id not in visited]
+    recs = recommend(
+        offers, lat, lon, now, interests=learned_interests(user, events, now, {i.category for i in items.values()}),
+        radius_m=radius_m, query_category=category, limit=40, trust=creators_svc.trust_map(session, user, now, events),
+    )
+    out = planner.plan_to_dict(planner.plan_route(recs, lat, lon, now, minutes, mode))
+    for stop in out["stops"]:
+        it = items[stop["id"]]
+        stop.update(venue=it.venue, area=it.area, price=it.price_text)
+    return out
 
 
 def _hay(i: Item) -> str:

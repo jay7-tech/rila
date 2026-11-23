@@ -3,13 +3,67 @@
   "labeled": false,
   "source": "https://youtube.com/shorts/eUOYnWO2FoE",
   "language": "Hindi",
-  "now": "2026-11-21T15:52:14",
+  "now": "2026-11-23T08:31:32",
   "posted_at": "2026-11-01T07:37:03",
   "caption": "Oldest Grill chicken spot at Bangalore #bangalore #funny #food #foodie #chicken #foodie #foodvlog",
-  "transcript": "[0:00-0:28 speech] बर्गर ब्रोष्ट लोड़ेड फॉर नवंबर से लेको\n[0:01-0:02 screen] Biggest\n[0:01-0:02 screen] Frazer,\n[0:01-0:02 screen] offer\n[0:07-0:08 screen] al Good\n[0:07-0:08 screen] MAD\n[0:07-0:08 screen] FOR\n[0:24-0:26 screen] ally\n[0:26-0:27 screen] al ಪ್ರ\n[0:26-0:29 screen] Ith Nov to 10th Nov\n[0:28-0:29 speech] 10 नवंबर तका रखा था\n[0:29-0:30 screen] ith 10th, Nov\n[0:29-0:30 screen] தீ y\n[0:29-0:44 speech] सिरिया का उत्पेशा चुके जाई से बढ़ें\n[0:30-0:32 screen] Ith Nov\n[0:30-0:32 screen] Real Go\n[0:33-0:35 screen] Real Flavor\n[0:33-0:35 screen] Real\n[0:33-0:35 screen] FECTLY\n[0:33-0:35 screen] ക INGREDIENTS",
+  "transcript": "[0:00-0:02 speech] हमारे Fraser Town में सबसे बड़ा offer चल रहा है\n[0:01-0:02 screen] Biggest\n[0:01-0:02 screen] Frazer,\n[0:01-0:02 screen] offer\n[0:02-0:04 speech] खाली 99 रूपीस कु कबाब दे रही है\n[0:04-0:06 speech] खाली 99 रूपीस कु चिकन बिर्यानी\n[0:06-0:07 speech] 99 रूपीस कु बर्गर\n[0:07-0:08 screen] al Good\n[0:07-0:08 screen] MAD\n[0:07-0:08 screen] FOR\n[0:07-0:10 speech] Crispy chicken है तो Crispy fish कौन सा भी ले लियो\n[0:11-0:13 speech] खाली 99 रूपीस कु loaded है\n[0:13-0:16 speech] यह पूरे आफर है हींसु हमारे Siddiqui kebab centre में\n[0:16-0:18 speech] पूरे जन्याँ को Siddiqui kebab centre लूप मालूँ है\n[0:18-0:21 speech] जैंसीश के वास्ते Siddiqui kebab centre express भी लांच करको है\n[0:21-0:24 speech] यहाँ तुम्हारे बर्गर्स, ब्रोस्ट, लोडड हर एक चीज मिलती है\n[0:24-0:38 speech] और चीज़ाँ के वास्ते रेगुलर आफर हता 10 डेस के वास्ते\n[0:24-0:26 screen] ally\n[0:26-0:27 screen] al ಪ್ರ\n[0:26-0:29 screen] Ith Nov to 10th Nov\n[0:29-0:30 screen] ith 10th, Nov\n[0:29-0:30 screen] தீ y\n[0:30-0:32 screen] Ith Nov\n[0:30-0:32 screen] Real Go\n[0:33-0:35 screen] Real Flavor\n[0:33-0:35 screen] Real\n[0:33-0:35 screen] FECTLY\n[0:33-0:35 screen] ക INGREDIENTS\n[0:38-0:40 speech] तुम्हारा अम्मी आपा को, खानदान को, दोस्तां को\n[0:40-0:42 speech] सिद्धी की कबाब सेंटर को बला ले काज़ो\n[0:42-0:44 speech] अब जल्ली जल्ली फॉलो करो नथन खाबा मैं आग डरालतू",
   "expected": {
-    "items": []
+    "items": [
+      {
+        "kind": "place",
+        "venue": "Siddiqui kebab centre",
+        "names": [
+          "Siddiqui Kebab Centre",
+          "Siddiqui Kebab Centre"
+        ],
+        "city": "Bangalore"
+      },
+      {
+        "kind": "offer",
+        "venue": "Siddiqui kebab centre",
+        "names": [
+          "Siddiqui Kebab Centre",
+          "All items for ₹99 at Siddiqui Kebab Centre"
+        ],
+        "city": "Bangalore"
+      }
+    ]
   },
-  "draft_from_model": [],
+  "draft_from_model": [
+    {
+      "kind": "place",
+      "category": "food",
+      "title": "Siddiqui Kebab Centre",
+      "venue": "Siddiqui kebab centre",
+      "venue_en": "Siddiqui Kebab Centre",
+      "city": "Bangalore",
+      "area": "Fraser Town",
+      "summary": "A popular kebab shop in Fraser Town, Bangalore mentioned in the video.",
+      "evidence": "यह पूरे आफर है हींसु हमारे Siddiqui kebab centre में",
+      "evidence_source": "speech",
+      "evidence_at": 13.0,
+      "grounded": true,
+      "confidence": 0.92
+    },
+    {
+      "kind": "offer",
+      "category": "food",
+      "title": "All items for ₹99 at Siddiqui Kebab Centre",
+      "venue": "Siddiqui kebab centre",
+      "venue_en": "Siddiqui Kebab Centre",
+      "city": "Bangalore",
+      "area": "Fraser Town",
+      "summary": "Various items like kebab, chicken biryani, burger, and crispy chicken/fish are offered at just 99 rupees each.",
+      "price_text": "₹99 each",
+      "duration_text": "from 1st Nov to 10th Nov",
+      "starts_at": "2026-11-01",
+      "ends_at": "2026-11-10",
+      "evidence": "यह पूरे आफर है हींसु हमारे Siddiqui kebab centre में",
+      "evidence_source": "speech",
+      "evidence_at": 13.0,
+      "grounded": true,
+      "confidence": 0.85
+    }
+  ],
   "ungrounded_dropped": 0
 }

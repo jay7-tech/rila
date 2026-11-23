@@ -6,7 +6,7 @@ import os
 import time
 import uuid
 from collections import defaultdict, deque
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -17,8 +17,11 @@ from sqlalchemy.orm import Session
 
 from .config import get_settings
 from .db import get_db
-from .models import Document, Item, Job, User, utcnow
+from .models import Document, Event, Item, Job, User, utcnow
 from .perception import media
+from .recs import learner
+from .services import creators as creators_svc
+from .services import places as places_svc
 from .services import query as q
 from .services import users as users_svc
 from .services.worker import enqueue
@@ -65,6 +68,10 @@ class LocationIn(BaseModel):
     lon: float = Field(ge=-180, le=180)
 
 
+class FeedbackIn(BaseModel):
+    action: Literal["like", "dismiss", "visit", "open"]
+
+
 class SubmitIn(BaseModel):
     url: str = Field(max_length=500)
 
@@ -87,6 +94,7 @@ def _check_queue(db: Session, user: User) -> None:
 def create_app(lifespan=None) -> FastAPI:
     app = FastAPI(title="Rilla", version="0.2.0", lifespan=lifespan)
     signup_limit, submit_limit = RateLimit(10, 3600), RateLimit(30, 600)
+    feedback_limit = RateLimit(300, 600)
 
     @app.get("/api/health")
     def health():
@@ -136,6 +144,15 @@ def create_app(lifespan=None) -> FastAPI:
     ):
         return {"items": q.recommend_for_user(db, user, lat, lon, utcnow(), radius, category, limit)}
 
+    @app.get("/api/plan")
+    def plan(
+        lat: float = Query(ge=-90, le=90), lon: float = Query(ge=-180, le=180),
+        minutes: int = Query(default=180, ge=30, le=720), mode: Literal["auto", "walk", "drive"] = "auto",
+        category: Optional[str] = None, user: User = Depends(current_user), db: Session = Depends(get_db),
+    ):
+        """An ordered outing over saved places that fits the time available, with arrival estimates."""
+        return q.plan_for_user(db, user, lat, lon, utcnow(), minutes, mode, category)
+
     @app.get("/api/items")
     def items(
         category: Optional[str] = None, q_text: Optional[str] = Query(default=None, alias="q"),
@@ -151,6 +168,40 @@ def create_app(lifespan=None) -> FastAPI:
         user: User = Depends(current_user), db: Session = Depends(get_db),
     ):
         return {"items": q.search_saved(db, user, q_text, utcnow(), lat, lon, limit)}
+
+    @app.get("/api/places")
+    def places(
+        q_text: Optional[str] = Query(default=None, alias="q", max_length=120),
+        lat: Optional[float] = Query(default=None, ge=-90, le=90), lon: Optional[float] = Query(default=None, ge=-180, le=180),
+        limit: int = Query(default=50, ge=1, le=100),
+        user: User = Depends(current_user), db: Session = Depends(get_db),
+    ):
+        """Saved venues merged across reels: one record per real place, with mentions, prices, offers and proof."""
+        return {"places": places_svc.list_places(q.user_items(db, user), utcnow(), lat, lon, q_text, limit)}
+
+    @app.get("/api/creators")
+    def creators(user: User = Depends(current_user), db: Session = Depends(get_db)):
+        """Who Rilla trusts among the creators you save from, and why (quotes verified, dropped, your reactions)."""
+        return {"creators": creators_svc.creator_stats(db, user, utcnow())}
+
+    @app.post("/api/items/{item_id}/feedback")
+    def feedback(item_id: int, body: FeedbackIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+        """Record like / dismiss / visit / open. Rilla learns interests from these and hides dismissed items from 'near me'."""
+        item = db.get(Item, item_id)
+        if item is None or item.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Not found")
+        feedback_limit.check(user.token)
+        db.add(Event(user_id=user.id, item_id=item.id, action=body.action, category=item.category, creator=item.creator))
+        if body.action == "visit":
+            item.visited = True
+        db.commit()
+        return {"ok": True}
+
+    @app.get("/api/me/interests")
+    def my_interests(user: User = Depends(current_user), db: Session = Depends(get_db)):
+        """What Rilla has learned about this user, with the evidence, so nothing is hidden."""
+        obs = [(e.action, e.category, e.created_at) for e in q.user_events(db, user)]
+        return {"interests": learner.explain(user.interests or {}, obs, utcnow())}
 
     @app.delete("/api/items/{item_id}")
     def delete_item(item_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):

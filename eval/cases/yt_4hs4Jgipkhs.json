@@ -3,7 +3,7 @@
   "labeled": false,
   "source": "https://youtube.com/shorts/4hs4Jgipkhs",
   "language": "English",
-  "now": "2026-11-21T15:37:54",
+  "now": "2026-11-23T08:24:04",
   "posted_at": "2026-10-14T13:10:20",
   "caption": "first time trying the famous Raja Gobi #shorts #streetfood #manchurian #keentoeat #bangalore",
   "transcript": "[0:00-0:03 speech] This is Bengaluru's most controversial spot\n[0:03-0:06 speech] People either love it or they think it's overrated\n[0:06-0:10 speech] So today we're at the iconic Raja Gobi to see if it's actually worth the hype\n[0:07-0:08 screen] ந்து\n[0:10-0:12 speech] I've been coming here since 7 years or so\n[0:11-0:13 screen] ears:\n[0:12-0:13 speech] It's just been like absolutely perfect\n[0:13-0:14 screen] ACT.\n[0:13-0:15 speech] This has always been the place for me\n[0:15-0:17 speech] Raja takes tons of fried Gobi\n[0:16-0:17 screen] tons ‘ried Gob\n[0:17-0:21 speech] Lightly tosses it in spicy tangy Indo-Chinese masala\n[0:19-0:20 screen] in spicy, ೩\n[0:20-0:22 screen] Indo\n[0:21-0:23 speech] And for Rs 110, the portion is huge\n[0:23-0:26 speech] To be honest, this looks really good\n[0:26-0:28 speech] It's actually damn good\n[0:28-0:30 speech] People who hate on this are just haters\n[0:30-0:34 speech] That's a juicy piece of Gobi\n[0:31-0:32 screen] wes\n[0:34-0:37 speech] And apparently I wasn't the only one who loved it\n[0:37-0:39 screen] ച്ച\n[0:37-0:39 speech] You're making me uncomfortable right now\n[0:39-0:40 speech] Can you leave?\n[0:40-0:41 speech] Was it What The Hype?\n[0:42-0:44 speech] I'm gonna get another one after this\n[0:44 speech] What The Hype\n[0:44-0:45 speech] Okay bye",
@@ -27,13 +27,13 @@
       "venue": "Raja Gobi",
       "venue_en": "Raja Gobi",
       "city": "Bangalore",
-      "summary": "A popular Bengaluru street‑food stall known for its large, lightly fried cauliflower tossed in spicy Indo‑Chinese masala, priced at Rs 110 per portion.",
+      "summary": "The creator visits the controversial Bengaluru spot Raja Gobi, known for its large portions of fried cauliflower tossed in spicy Indo‑Chinese masala, priced at Rs 110.",
       "price_text": "Rs 110",
-      "evidence": "And for Rs 110, the portion is huge",
+      "evidence": "So today we're at the iconic Raja Gobi to see if it's actually worth the hype",
       "evidence_source": "speech",
-      "evidence_at": 21.0,
+      "evidence_at": 6.0,
       "grounded": true,
-      "confidence": 0.97
+      "confidence": 0.96
     }
   ],
   "ungrounded_dropped": 0

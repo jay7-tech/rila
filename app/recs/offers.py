@@ -26,6 +26,7 @@ class Offer(BaseModel):
     source_url: str = ""
     confidence: float = Field(default=0.8, ge=0.0, le=1.0)
     saved_at: Optional[datetime] = None
+    creator: Optional[str] = None
 
     @model_validator(mode="after")
     def _window_order(self):

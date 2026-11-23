@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 from ..config import get_settings
 from ..core.chunking import chunk_lines
 from ..core.document import parse_rendered
-from ..core.grounding import ground, name_in_source
+from ..core.grounding import ground, looks_like_deal, looks_like_handle, name_in_source, name_line, strip_location_suffix, trim_name_fragment
 from ..core.text import normalize
 from ..signals.models import ExtractedSignal
 
@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 PROMPT_VERSION = "4"  # bump when the prompt changes; evaluation runs record it
 MAX_CHARS_PER_CALL = 9000  # longer transcripts are read in overlapping chunks
 CHUNK_TOKENS = 1500
+NEAR_SECONDS = 8.0  # a quote this close to the line naming the venue is taken to be about that venue
 
 Category = Literal["food", "store", "event", "education", "scheme", "service", "attraction", "other"]
 
@@ -173,6 +174,36 @@ def _loads_lenient(raw: str):
         raise
 
 
+_DEAL_CLAIM = re.compile(
+    r"\b(off|free|offer|offers|discount|deal|deals|combo|bogo|buy|launch|launching|opening|inaugur\w*|sale|cashback|"
+    r"coupon|limited|till|until|first \d+)\b|%|\bjust\s*(?:rs\.?|₹)?\s*\d",
+    re.I,
+)
+
+
+def _tidy_names(result: ExtractionResult) -> ExtractionResult:
+    """Repair venue names before they are checked: cut OCR fragments, and never keep a deal headline as a venue."""
+    for it in result.items:
+        for field in ("venue", "venue_en"):
+            value = getattr(it, field)
+            if looks_like_deal(value) or looks_like_handle(value):
+                setattr(it, field, None)
+            else:
+                value = trim_name_fragment(value)
+                setattr(it, field, strip_location_suffix(value, it.area, it.city))
+        if it.area and it.city and normalize(it.area) == normalize(it.city):
+            it.area = None  # "Bangalore, Bangalore"
+    return result
+
+
+def _is_real_offer(it: ExtractedItem) -> bool:
+    """An offer needs a validity window or a deal claim; a plain price list is just a place."""
+    if it.starts_at or it.ends_at or it.duration_text:
+        return True
+    text = " ".join(filter(None, [it.title, it.summary, it.evidence]))
+    return bool(_DEAL_CLAIM.search(text))
+
+
 def _clean(result: ExtractionResult, min_conf: float) -> ExtractionResult:
     items = []
     for it in result.items:
@@ -187,6 +218,8 @@ def _clean(result: ExtractionResult, min_conf: float) -> ExtractionResult:
         if len(title.split()) == 1 and title.islower():
             continue  # single lowercase word is almost always noise
         it.title = title
+        if it.kind == "offer" and named and not _is_real_offer(it):
+            it.kind = "place"  # menu prices and reviews are not deals
         if it.kind == "place" and not it.venue:
             it.venue = it.venue_en or title
         items.append(it)
@@ -211,6 +244,13 @@ def _ground(result: ExtractionResult, caption: str, transcript: str) -> Extracti
                 log.info("dropped ungrounded item %r", (it.title or it.venue or "")[:60])
                 continue
             it.grounded, it.evidence_source, it.evidence_at = True, hit.source, hit.start
+            names = [it.venue, it.venue_en]
+            if it.kind in ("place", "offer") and any(names) and not name_in_source(names, [], it.evidence):
+                # the quote is real but does not mention the venue (it is about a price, say): quote the line that does
+                anchor = name_line(names, lines, caption)
+                near = anchor is not None and anchor.start is not None and hit.start is not None and abs(anchor.start - hit.start) <= NEAR_SECONDS
+                if anchor is not None and anchor.text and not near:  # a quote seconds from the name still supports the item
+                    it.evidence, it.evidence_source, it.evidence_at = anchor.text, anchor.source, anchor.start
         kept.append(it)
     result.items = kept
     result.stats["ungrounded_dropped"] = result.stats.get("ungrounded_dropped", 0) + dropped + unnamed  # invented quote or invented name
@@ -251,14 +291,21 @@ def _windows(transcript: str) -> List[str]:
 
 
 def _dedupe(items: List[ExtractedItem]) -> List[ExtractedItem]:
-    seen, out = set(), []
+    """One item per venue within a video. If the same venue came out as a place and as an offer, keep the more
+    informative one: a real offer beats a place; otherwise the first seen wins."""
+    best: dict = {}
+    order: List[str] = []
     for it in items:
-        key = (it.kind, normalize(it.venue_en or it.venue or it.title))
-        if key in seen:
+        name = normalize(it.venue_en or it.venue or "")
+        key = name or "\0" + normalize(it.title)  # unnamed items are only merged when their titles match
+        if key not in best:
+            best[key] = it
+            order.append(key)
+        elif it.kind == "offer" and best[key].kind != "offer" and _is_real_offer(it):
+            best[key] = it
+        elif it.kind == best[key].kind and name == "":
             continue
-        seen.add(key)
-        out.append(it)
-    return out
+    return [best[k] for k in order]
 
 
 def extract(
@@ -282,5 +329,6 @@ def extract(
         merged.items += part.items
         merged.signals += part.signals
     merged.items = _dedupe(merged.items)
+    merged = _tidy_names(merged)
     merged = _ground(merged, caption or "", transcript or "")
     return _clean(merged, min_conf)

@@ -3,7 +3,7 @@
   "labeled": false,
   "source": "https://youtube.com/shorts/tCpsk0y5INA",
   "language": "English",
-  "now": "2026-11-21T15:33:18",
+  "now": "2026-11-23T08:18:42",
   "posted_at": "2026-05-05T06:51:42",
   "caption": "top 3 burgers in bangalore 🍔 #shorts #burger #fastfood #bangalore #food #keentoeat #foodie",
   "transcript": "[0:00-0:05 speech] trying and rating the best burger spots in bengaluru with my friend akshay because there's\n[0:01-0:04 screen] Spots\n[0:01-0:04 screen] the\n[0:05-0:10 speech] no way she can eat three burgers alone the first stop is the newest kid on the block the burgery\n[0:09-0:12 screen] wer\n[0:10-0:16 speech] we've got the smashed down basic burger smells good cheers i actually really really like the\n[0:12-0:15 screen] Single Patty\n[0:16-0:21 speech] buns a tad bit sweet maybe because of the sauces the tomato and the lettuce they're not working\n[0:21-0:26 speech] for me it's a nice basic smash burger you can obviously ask them to customize it remove the\n[0:23-0:26 screen] fev)\n[0:26-0:30 speech] the tomatoes and lettuce if you don't like that i'll give it a 8 on 10 7 on 10 for me off to the\n[0:30-0:37 speech] next spot where we waited 20 minutes for one smash burger oh my god finally this took a lot of time\n[0:31-0:34 screen] here w\n[0:34-0:37 screen] వ] smash burger\n[0:37-0:44 speech] the meat to bun ratio looks much better on this let's go the bun is slightly dense and thick over\n[0:44-0:50 speech] the edges the meat is super tender and juicy i'll give this a decent 7 on 10 this is 8 on 10 off to\n[0:45-0:47 screen] the meat is\n[0:50-0:55 speech] the third spot which is my favorite burger spot in bangalore stash has been scored this is a\n[0:55-1:02 speech] smash burger from beyond burgh i really like the packaging just look at the cross oh my god\n[0:56-0:58 screen] sma\n[0:58-1:01 screen] the pac!\n[1:02-1:11 speech] cheers first bite and akshay was already in burger heaven this is insane the bread is super soft the\n[1:06-1:09 screen] fi insane\n[1:11-1:18 speech] skirting is crispy and super juicy i'm gonna give this a solid perfect 10 on 10 10 on 10\n[1:15-1:17 screen] ಈ Solid,\n[1:18-1:21 speech] thank you for watching and tell us which is your favorite burger spot in bangalore\n[1:20-1:21 screen] \\favorite",
@@ -11,17 +11,19 @@
     "items": [
       {
         "kind": "place",
-        "venue": "The Burgery",
+        "venue": "the burgery",
         "names": [
-          "The Burgery – Smash Burger"
+          "The Burgery",
+          "The Burgery"
         ],
         "city": "Bangalore"
       },
       {
         "kind": "place",
-        "venue": "Stash",
+        "venue": "stash",
         "names": [
-          "Stash – Smash Burger"
+          "Stash",
+          "Stash"
         ],
         "city": "Bangalore"
       }
@@ -31,26 +33,26 @@
     {
       "kind": "place",
       "category": "food",
-      "title": "The Burgery – Smash Burger",
-      "venue": "The Burgery",
+      "title": "The Burgery",
+      "venue": "the burgery",
       "venue_en": "The Burgery",
       "city": "Bangalore",
-      "summary": "The creator rates the smashed down basic burger at The Burgery, noting sweet buns, sauces, tomato and lettuce, giving it an 8/10.",
+      "summary": "Featured as the first burger spot, serving a smashed basic burger with sweet buns and sauces.",
       "evidence": "the newest kid on the block the burgery",
       "evidence_source": "speech",
       "evidence_at": 5.0,
       "grounded": true,
-      "confidence": 0.92
+      "confidence": 0.85
     },
     {
       "kind": "place",
       "category": "food",
-      "title": "Stash – Smash Burger",
-      "venue": "Stash",
+      "title": "Stash",
+      "venue": "stash",
       "venue_en": "Stash",
       "city": "Bangalore",
-      "summary": "The creator calls Stash their favorite burger spot, describing the soft bread, crispy and juicy patty, and awarding a perfect 10/10.",
-      "evidence": "my favorite burger spot in bangalore stash has been scored",
+      "summary": "Third and favorite burger spot, praised for soft bread and crispy, juicy patty, rated a perfect 10.",
+      "evidence": "the third spot which is my favorite burger spot in bangalore stash has been scored",
       "evidence_source": "speech",
       "evidence_at": 50.0,
       "grounded": true,

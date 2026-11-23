@@ -2,6 +2,9 @@
 
     python -m app.cli doctor                  check that everything Rilla needs is installed
     python -m app.cli make-user "Suresh"      create a web account and print its sign-in link
+    python -m app.cli link "Suresh"           the sign-in link for that name (created if missing); the last line is the link
+    python -m app.cli status                  counts, queued and failed jobs, settings in use (no secrets)
+    python -m app.cli demo "Suresh"           add sample places, offers and reactions so every screen has something (--clear removes them)
     python -m app.cli read <link|file|text>   see what Rilla perceives and extracts (no database writes)
     python -m app.cli capture <document id>   save a processed video as a draft evaluation case
     python -m app.cli batch <links.txt>       read many links, write draft cases and a review sheet
@@ -72,6 +75,58 @@ def cmd_make_user(args) -> int:
         user = users_svc.create_user(session, None, args.name)
         session.commit()
         print(f"Created {args.name}.\nSign-in link (keep it private):\n{get_settings().public_url}/?t={user.token}")
+    return 0
+
+
+def cmd_link(args) -> int:
+    from sqlalchemy import func, select
+
+    from .models import User
+    from .services import users as users_svc
+
+    with _db() as session:
+        user = session.scalars(select(User).where(func.lower(User.name) == args.name.strip().lower()).order_by(User.id)).first()
+        if user is None:
+            user = users_svc.create_user(session, None, args.name)
+            session.commit()
+        print(f"{get_settings().public_url}/?t={user.token}")
+    return 0
+
+
+def cmd_status(_args) -> int:
+    from sqlalchemy import func, select
+
+    from .models import Document, Event, Item, Job, User
+
+    s = get_settings()
+    with _db() as session:
+        count = lambda model, *where: session.scalar(select(func.count()).select_from(model).where(*where)) or 0
+        print(f"users {count(User)} | items {count(Item)} | documents {count(Document)} | feedback events {count(Event)}")
+        print("jobs  " + " | ".join(f"{st} {count(Job, Job.status == st)}" for st in ("queued", "running", "done", "failed")))
+        failed = list(session.scalars(select(Job).where(Job.status == "failed").order_by(Job.id.desc()).limit(3)))
+        for j in failed:
+            print(f"  failed job {j.id}: {(j.error or '')[:110]}")
+        print(f"asr {s.asr_engine} ({'groq whisper' if s.asr_engine != 'local' and s.groq_api_key else 'local ' + s.whisper_model}) | ocr {s.ocr_langs} | llm {s.groq_model}")
+        print(f"sign-up {'invite code' if s.invite_code else 'open' if s.open_signup else 'closed'} | public url {s.public_url}")
+    return 0
+
+
+def cmd_demo(args) -> int:
+    from sqlalchemy import func, select
+
+    from .models import User, utcnow
+    from .services import demo as demo_svc
+
+    with _db() as session:
+        user = session.scalars(select(User).where(func.lower(User.name) == args.name.strip().lower()).order_by(User.id)).first()
+        if user is None:
+            print(f"No user called {args.name!r}. Run: python -m app.cli link \"{args.name}\"")
+            return 1
+        if args.clear:
+            print(f"Removed {demo_svc.clear_demo(session, user)} demo items.")
+            return 0
+        n = demo_svc.seed_demo(session, user, utcnow())
+        print(f"Added {n} demo items. Open the app: Places, Plan and You now have data. Remove with: demo \"{args.name}\" --clear" if n else "Demo data is already there.")
     return 0
 
 
@@ -207,6 +262,14 @@ def main(argv=None) -> int:
     a = sub.add_parser("make-user")
     a.add_argument("name")
     a.set_defaults(fn=cmd_make_user)
+    a = sub.add_parser("link")
+    a.add_argument("name")
+    a.set_defaults(fn=cmd_link)
+    sub.add_parser("status").set_defaults(fn=cmd_status)
+    a = sub.add_parser("demo")
+    a.add_argument("name")
+    a.add_argument("--clear", action="store_true")
+    a.set_defaults(fn=cmd_demo)
     a = sub.add_parser("read")
     a.add_argument("source", help="a video link, a path to a video/audio/image file, or some text")
     a.add_argument("--no-llm", action="store_true", help="only show what was seen and heard")

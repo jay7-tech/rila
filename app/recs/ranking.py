@@ -58,14 +58,16 @@ def recommend(
     radius_m: float = 3000.0,
     query_category: Optional[str] = None,
     limit: int = 5,
+    trust: Optional[Dict[str, float]] = None,
 ) -> List[Recommendation]:
-    """Score = distance 0.45 + urgency 0.30 + interest 0.20 + confidence 0.05.
+    """Score = distance 0.45 + urgency 0.30 + interest 0.20 + confidence 0.05, then x (0.85 + 0.30 x creator trust).
 
     Expired offers and anything beyond the radius (when it has a location)
     are never returned. `query_category` hard-filters when the user asked
     for something specific ("coffee deals").
     """
     interests = interests or {}
+    trust = trust or {}
     out: List[Recommendation] = []
     for o in offers:
         st = status(o, now)
@@ -82,6 +84,9 @@ def recommend(
         us = _urgency_score(o, now)
         interest = min(max(interests.get(o.category, 0.0), 0.0), 1.0)
         score = 0.45 * ds + 0.30 * us + 0.20 * interest + 0.05 * o.confidence
+        t = trust.get(o.creator) if o.creator else None
+        if t is not None:
+            score *= 0.85 + 0.30 * t  # a creator whose reels check out lifts the score by up to 15%; an unreliable one lowers it
         reasons = []
         if d is not None and d < 1000:
             reasons.append("close by")
@@ -89,6 +94,8 @@ def recommend(
             reasons.append("ending soon")
         if interest >= 0.5:
             reasons.append("matches your interests")
+        if t is not None and t >= 0.75:
+            reasons.append("reliable creator")
         out.append(Recommendation(o, round(score, 4), d, time_left_label(o, now), reasons))
     out.sort(key=lambda r: (-r.score, r.distance_m if r.distance_m is not None else 1e12))
     return out[:limit]

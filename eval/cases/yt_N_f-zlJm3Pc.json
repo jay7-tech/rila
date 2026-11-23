@@ -3,14 +3,14 @@
   "labeled": false,
   "source": "https://youtube.com/shorts/N_f-zlJm3Pc",
   "language": "Hindi",
-  "now": "2026-11-21T15:37:06",
+  "now": "2026-11-23T08:23:35",
   "posted_at": "2024-11-07T12:24:49",
   "caption": "Business: pramodbathija5073@gmail.com\n\nLocations and prices:\n1. Brahmins coffee bar: Pushp Kiran, 19, Rangarao Rd, near Shankar Mutt Road, Shankarapura, Bengaluru, Karnataka 560004\n\nChow chow bath: Rs 70\n\n2. Taaza Thindi: 1004, 26th Main Rd, 4th T Block East, Jayanagara 9th Block, Jayanagar, Bengaluru, Karnataka 560041\n\nIdli vada: Rs 36\n\n3. Namaste: 1086/A, 1087/A, 14th Main, 18th Cross Rd, near BDA Complex, III Sector, HSR Layout, Bengaluru, Karnataka 560102\n\nShavige bath: Rs 50\nMadhur vade: Rs 25\n\n4. Babai tiffins: 8, 19th Main Rd, 4th Sector, HSR Layout, Bengaluru, Karnataka 560102\n\nGhee podi upma: Rs 70\nMysore Bajji: Rs 70",
-  "transcript": "[0:00-0:30 speech] बेस्ट ब्रेकफुस कहां मिलता है आओ आपको बताता हूँ सबसे पहले आजो ब्रामिन्स कॉफी बार में खाने चाव चाव बात ये दो टाइप के बात सोते हैं केसरी और खारा बात खारा बात मीन सेवरी जिसमें कैरेट्स कड़ी पत्ता हलका ग्रीन चिली जाता है और केस\n[0:09-0:11 screen] wey\n[0:30-0:58 speech] Mastin HSR Outlet Mastin HSR Outlet Chutney Hair So crispy and the chutney was the highlight. Then Khaya Shaabi Ge Bad Jyo Bantaa Avermously यानी सेवाया से ये एक सेवरी स्नाक है जिसमें कैरेट पीस हलका सा Lime Juice ढला जाता है अन्मी आजो बबाय टिफिन्स में खाने घीपुडी उपमा और मैसूर बज्जी उपमा वाज़ सॉफ्ट अबिट स्पाइसी एं",
+  "transcript": "[0:00-0:30 speech] बेस्ट ब्रेकफुस कहां मिलता है आओ आपको बताता हूँ सबसे पहले आजो ब्रामिन्स कॉफी बार में खाने चाव चाव बात ये दो टाइप के बात सोते हैं केसरी और खारा बात खारा बात मीन सेवरी जिसमें कैरेट्स कड़ी पत्ता हलका ग्रीन चिली जाता है और केस\n[0:09-0:11 screen] wey\n[0:30-0:32 speech] Jain<|nl|> अमस्तें एचेसार आउटलेट हरमार अनुख निपूरी इसमा चुनना चाह।\n[0:32-0:34 speech] जहाँ शावि के बाद और मधुर वड़े खाया है।\n[0:34-0:35 speech] मधुर वड़े ऐगदम कृस्पी स्नाक है जो बनता है\n[0:35-0:42 speech] 1098A 1099A 1099A 1099A\n[0:42-0:43 speech] 10992D 109922\n[0:43-0:46 speech] 109923\n[0:46-0:48 speech] 109924\n[0:48-0:49 speech] 109926\n[0:49 speech] 109924\n[0:49 speech] 109925\n[0:49 speech] 109926\n[0:50-0:51 speech] 109923\n[0:51-0:52 speech] 109925\n[0:52 speech] 109933\n[0:52-0:53 speech] 109932\n[0:53-0:54 speech] 109933\n[0:54 speech] 1090034\n[0:54-0:55 speech] 109935\n[0:55 speech] 109934\n[0:55-0:56 speech] 109936\n[0:56 speech] 109937\n[0:56-0:57 speech] 109937\n[0:57-0:58 speech] 109938\n[0:58 speech] 109943",
   "expected": {
     "items": [
       {
-        "kind": "offer",
+        "kind": "place",
         "venue": "Brahmins coffee bar",
         "names": [
           "Chow chow bath"
@@ -18,7 +18,7 @@
         "city": "Bengaluru"
       },
       {
-        "kind": "offer",
+        "kind": "place",
         "venue": "Taaza Thindi",
         "names": [
           "Idli vada"
@@ -26,7 +26,7 @@
         "city": "Bengaluru"
       },
       {
-        "kind": "offer",
+        "kind": "place",
         "venue": "Namaste",
         "names": [
           "Shavige bath"
@@ -34,7 +34,7 @@
         "city": "Bengaluru"
       },
       {
-        "kind": "offer",
+        "kind": "place",
         "venue": "Babai tiffins",
         "names": [
           "Ghee podi upma"
@@ -45,60 +45,64 @@
   },
   "draft_from_model": [
     {
-      "kind": "offer",
+      "kind": "place",
       "category": "food",
       "title": "Chow chow bath",
       "venue": "Brahmins coffee bar",
       "venue_en": "Brahmins coffee bar",
       "city": "Bengaluru",
-      "summary": "Chow chow bath is offered at Brahmins coffee bar in Bengaluru.",
+      "area": "Shankarapura",
+      "summary": "Chow chow bath is available at Brahmins coffee bar.",
       "price_text": "Rs 70",
-      "evidence": "Chow chow bath: Rs 70",
+      "evidence": "Brahmins coffee bar: Pushp Kiran, 19, Rangarao Rd, near Shankar Mutt Road, Shankarapura, Bengaluru, Karnataka 560004",
       "evidence_source": "caption",
       "grounded": true,
       "confidence": 0.97
     },
     {
-      "kind": "offer",
+      "kind": "place",
       "category": "food",
       "title": "Idli vada",
       "venue": "Taaza Thindi",
       "venue_en": "Taaza Thindi",
       "city": "Bengaluru",
-      "summary": "Idli vada is offered at Taaza Thindi in Bengaluru.",
+      "area": "Jayanagar",
+      "summary": "Idli vada is available at Taaza Thindi.",
       "price_text": "Rs 36",
-      "evidence": "Idli vada: Rs 36",
+      "evidence": "Taaza Thindi: 1004, 26th Main Rd, 4th T Block East, Jayanagara 9th Block, Jayanagar, Bengaluru, Karnataka 560041",
       "evidence_source": "caption",
       "grounded": true,
-      "confidence": 0.97
+      "confidence": 0.96
     },
     {
-      "kind": "offer",
+      "kind": "place",
       "category": "food",
       "title": "Shavige bath",
       "venue": "Namaste",
       "venue_en": "Namaste",
       "city": "Bengaluru",
-      "summary": "Shavige bath is offered at Namaste in Bengaluru.",
+      "area": "HSR Layout",
+      "summary": "Shavige bath is available at Namaste.",
       "price_text": "Rs 50",
-      "evidence": "Shavige bath: Rs 50",
+      "evidence": "Namaste: 1086/A, 1087/A, 14th Main, 18th Cross Rd, near BDA Complex, III Sector, HSR Layout, Bengaluru, Karnataka 560102",
       "evidence_source": "caption",
       "grounded": true,
-      "confidence": 0.97
+      "confidence": 0.96
     },
     {
-      "kind": "offer",
+      "kind": "place",
       "category": "food",
       "title": "Ghee podi upma",
       "venue": "Babai tiffins",
       "venue_en": "Babai tiffins",
       "city": "Bengaluru",
-      "summary": "Ghee podi upma is offered at Babai tiffins in Bengaluru.",
+      "area": "HSR Layout",
+      "summary": "Ghee podi upma is available at Babai tiffins.",
       "price_text": "Rs 70",
-      "evidence": "Ghee podi upma: Rs 70",
+      "evidence": "Babai tiffins: 8, 19th Main Rd, 4th Sector, HSR Layout, Bengaluru, Karnataka 560102",
       "evidence_source": "caption",
       "grounded": true,
-      "confidence": 0.97
+      "confidence": 0.96
     }
   ],
   "ungrounded_dropped": 0

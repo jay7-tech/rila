@@ -3,10 +3,10 @@
   "labeled": false,
   "source": "https://youtube.com/shorts/1VNFhmlZR74",
   "language": "Hindi",
-  "now": "2026-11-21T15:40:51",
+  "now": "2026-11-23T08:25:30",
   "posted_at": "2026-11-21T08:50:59",
   "caption": "Have you tried Malika Biriyani? #bengaluru #food #foodie",
-  "transcript": "[0:00-0:03 speech] बारी नहीं आ रही है\n[0:03-0:04 speech] तोनने बिरियानी\n[0:04-0:08 speech] दूर इट इस लूज\n[0:08-0:12 speech] बड़ी है द बिरियानी प्लेज\n[0:12-0:13 speech] फाइफ़ अन्य मीटर वॉक लेटर\n[0:13-0:15 speech] वी फाइनली फाउंड द बिलिंग सेक्षन है\n[0:15-0:18 speech] और भाई बिरियानी के ओडर्स रुक ही नहीं रहे थे\n[0:18-0:20 speech] गर्म करना और गंगोताब टाक।\n[0:20-0:22 speech] मैं फिर चिकन बीरी बन कर रही है\n[0:22-0:23 speech] और हम 20 मिनटों जंगएँ चिकने में भाईट पर भागते हैं\n[0:23-0:27 speech] ग्रहड मुल से ऐश दन मुनसी जतके 20 मिनटों बटने उठी गए\n[0:25-0:26 screen] got the\n[0:25-0:26 screen] Kebab:\n[0:25-0:26 screen] and\n[0:27-0:29 speech] and I had chicken kebabs first\n[0:28-0:30 screen] Rey\n[0:29-0:31 speech] hot, juicy, and I liked it\n[0:31-0:34 speech] then it was time to try the most hyped biryani\n[0:31-0:33 screen] ANS\n[0:31-0:33 screen] Hot, jui\n[0:34-0:36 speech] first bite and this is what we had to say\n[0:36-0:37 speech] I ate better than this\n[0:36-0:38 screen] iil\n[0:37-0:39 speech] why is it hyped? I didn't understand\n[0:39-0:41 speech] I would still go back to a Gundo Pulao\n[0:41-0:44 speech] if it was your recommendation, then I would have tried both the biryani\n[0:44-0:46 screen] ಟ್ರ\n[0:44-0:46 screen] SSS\n[0:44-0:46 speech] but I would have liked this better\n[0:46-0:48 speech] rating this is 7.5",
+  "transcript": "[0:00-0:30 speech] लोग ले लो ढूंढ रूपदारी मिशेर एक बहुत ही अधिक बड़े भाई ने ब्लूंगे बीरियानी पूछ तक उनके की अधिक बटन बीरियानी पेस पूछ। इसे बहुत अस्थिक कैंप्रेडे फ्रॉट फाइड इनशार नियुक्तरी और थ्री कर रहा में भाई बीलि\n[0:25-0:26 screen] got the\n[0:25-0:26 screen] Kebab:\n[0:25-0:26 screen] and\n[0:28-0:30 screen] Rey\n[0:30-0:31 speech] and I liked it\n[0:31-0:34 speech] then it was time to try the most hyped biryani\n[0:31-0:33 screen] ANS\n[0:31-0:33 screen] Hot, jui\n[0:34-0:36 speech] first bite and this is what we had to say\n[0:36-0:37 speech] I ate better than this\n[0:36-0:38 screen] iil\n[0:37-0:39 speech] why is it so hyped? I didn't understand\n[0:39-0:41 speech] I would still go back to a Gundo Pulao\n[0:41-0:43 speech] if I had come here on your recommendation\n[0:43-0:45 speech] to try the Dhoni Biryani\n[0:44-0:46 screen] ಟ್ರ\n[0:44-0:46 screen] SSS\n[0:45-0:46 speech] but I would have got better than this\n[0:46-0:48 speech] rating this is 7.5",
   "expected": {
     "items": [
       {
@@ -28,7 +28,7 @@
       "venue": "Malika Biriyani",
       "venue_en": "Malika Biryani",
       "city": "Bengaluru",
-      "summary": "A video mentions trying Malika Biryani, a popular biryani spot in Bengaluru.",
+      "summary": "The creator mentions trying Malika Biryani in Bengaluru.",
       "evidence": "Have you tried Malika Biriyani? #bengaluru #food #foodie",
       "evidence_source": "caption",
       "grounded": true,

@@ -3,13 +3,39 @@
   "labeled": false,
   "source": "https://youtube.com/shorts/JBETzSh4Kxw",
   "language": "Kannada",
-  "now": "2026-11-21T15:42:50",
+  "now": "2026-11-23T08:26:44",
   "posted_at": "2025-03-05T16:44:25",
   "caption": "🔥😳Street Different style sapota kabab,Pine apple ,Pudina kabab,Red kabab honest video🔥‼️#food",
   "transcript": "[0:00-0:02 speech] This kabab truck is 16 years old.\n[0:00-0:02 screen] galur\n[0:02 screen] steofl\n[0:02-0:06 speech] The small rules here are that the girls who come to pick up the kabab are the first ones.\n[0:04 screen] lasteo\n[0:06-0:08 speech] The girls should not pay the price to the people.\n[0:06-0:08 screen] asteofber\n[0:08-0:12 speech] Half 70 full 100 rupees, 4 varieties of kababs are available here.\n[0:12-0:14 speech] Red, green, pineapple sapota.\n[0:14-0:16 speech] Then 50 kg kabab is sold daily.\n[0:16-0:17 speech] People are always like this.\n[0:17-0:21 speech] They put the iron leaves on the newspaper and sprinkle some powder on the top of the kabab.\n[0:21-0:24 speech] It is soft and juicy to eat and very nice.\n[0:24-0:27 speech] This truck is located in Kuru Braili, Kaveri Nagar.\n[0:24-0:26 screen] டதி\n[0:26 screen] Tasteofbengaluru_\n[0:27-0:28 speech] Visit and taste.",
   "expected": {
-    "items": []
+    "items": [
+      {
+        "kind": "offer",
+        "venue": "Tasteofbengaluru_",
+        "names": [
+          "Sapota, Pineapple, Pudina & Red Kabab"
+        ],
+        "city": "Bengaluru"
+      }
+    ]
   },
-  "draft_from_model": [],
+  "draft_from_model": [
+    {
+      "kind": "offer",
+      "category": "food",
+      "title": "Sapota, Pineapple, Pudina & Red Kabab",
+      "venue": "Tasteofbengaluru_",
+      "venue_en": "Tasteofbengaluru_",
+      "city": "Bengaluru",
+      "area": "Kaveri Nagar",
+      "summary": "A kabab truck offers four varieties of kababs (red, green, pineapple, sapota) at 70 rupees for half and 100 rupees for full portions, selling about 50 kg daily.",
+      "price_text": "Half 70 full 100 rupees",
+      "evidence": "Half 70 full 100 rupees, 4 varieties of kababs are available here.",
+      "evidence_source": "speech",
+      "evidence_at": 8.0,
+      "grounded": true,
+      "confidence": 0.94
+    }
+  ],
   "ungrounded_dropped": 0
 }

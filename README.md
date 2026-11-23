@@ -108,3 +108,17 @@ The full architecture and roadmap is the "Rilla: Architecture and Build Roadmap"
 - `ASR_ENGINE=auto` (default) uses Groq Whisper large-v3 when `GROQ_API_KEY` is set, otherwise local faster-whisper. If Groq fails it falls back to local. **Audio is sent to Groq unless `ASR_ENGINE=local`.**
 - `OCR_LANGS` defaults to `eng+hin+kan+tel`; `OCR_MIN_CONF_NONLATIN` filters junk in non-Latin scripts.
 - Items whose venue name does not appear in the caption, speech or on-screen text are dropped (counted as `ungrounded_dropped`).
+
+## What you can do with your saved reels
+- **Near me / All saved:** ranked by distance, time left, your learned tastes and how reliable the creator is. Each card has *Like*, *I went* and *Not for me*; hidden items disappear from Near me and from plans.
+- **Places:** the same venue seen in several reels is merged into one card (reels, creators, prices, live offers, best proof). `GET /api/places`.
+- **Plan:** `GET /api/plan?lat=&lon=&minutes=` picks the best nearby saved places and orders them into a route that fits your time, respecting offer start and end times. Times are estimates from straight-line distance.
+- **You:** shows what Rilla has learned (interest per category) and how reliable each creator is, with the numbers behind it. `GET /api/me/interests`, `GET /api/creators`.
+- Feedback is stored in a new `events` table (migration 0003). Run `docker compose up -d migrate` or restart the stack to apply it.
+- UI smoke test: `npm i jsdom && node web/test/ui_smoke.js`.
+
+## Run everything with one command (Windows)
+From the project folder in PowerShell or Command Prompt:
+- `.\rilla up` starts the stack, checks it, and opens your browser already signed in.
+- `.\rilla demo` adds sample places and offers so the Places, Plan and You tabs have something to show; `.\rilla demo-clear` removes them.
+- `.\rilla status`, `.\rilla logs`, `.\rilla restart`, `.\rilla test`, `.\rilla batch`, `.\rilla eval`, `.\rilla public`, `.\rilla down`. Run `.\rilla help` for the list.
