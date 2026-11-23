@@ -21,6 +21,7 @@ from .models import Document, Event, Item, Job, User, utcnow
 from .perception import media
 from .recs import learner
 from .services import creators as creators_svc
+from .services import demo as demo_svc
 from .services import places as places_svc
 from .services import query as q
 from .services import users as users_svc
@@ -66,6 +67,11 @@ def client_key(request: Request) -> str:
 class LocationIn(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
+
+
+class DemoIn(BaseModel):
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lon: Optional[float] = Field(default=None, ge=-180, le=180)
 
 
 class FeedbackIn(BaseModel):
@@ -178,6 +184,17 @@ def create_app(lifespan=None) -> FastAPI:
     ):
         """Saved venues merged across reels: one record per real place, with mentions, prices, offers and proof."""
         return {"places": places_svc.list_places(q.user_items(db, user), utcnow(), lat, lon, q_text, limit)}
+
+    @app.post("/api/demo")
+    def add_demo(body: DemoIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+        """Add sample places and offers around the given point (or the last known location) so every screen can be tried."""
+        feedback_limit.check(user.token)
+        centre = (body.lat, body.lon) if body.lat is not None and body.lon is not None else None
+        return {"added": demo_svc.seed_demo(db, user, utcnow(), centre)}
+
+    @app.delete("/api/demo")
+    def remove_demo(user: User = Depends(current_user), db: Session = Depends(get_db)):
+        return {"removed": demo_svc.clear_demo(db, user)}
 
     @app.get("/api/creators")
     def creators(user: User = Depends(current_user), db: Session = Depends(get_db)):

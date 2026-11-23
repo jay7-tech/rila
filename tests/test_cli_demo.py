@@ -83,3 +83,26 @@ def test_demo_data_exercises_every_feature_through_the_api(client, use_session, 
     # Plan: a route over the demo places fits in a few hours
     plan = client.get(f"/api/plan?lat={HERE[0]}&lon={HERE[1]}&minutes=300", headers=h).json()
     assert len(plan["stops"]) >= 3 and plan["total_minutes"] <= 300
+
+
+def test_demo_creates_no_filler_items_and_trust_comes_from_reading_history(use_session, user):
+    demo_svc.seed_demo(use_session, user, NOW, HERE)
+    titles = [i.title for i in use_session.scalars(select(Item).where(Item.user_id == user.id))]
+    assert not any("extra" in t for t in titles) and len(titles) == 10
+    from app.services import creators as creators_svc
+    rows = {r["creator"]: r for r in creators_svc.creator_stats(use_session, user, NOW)}
+    assert rows["bengaluru.eats"]["grounded"] == 6 and rows["clickbait.deals"]["dropped"] == 6
+
+
+def test_demo_endpoints_centre_on_the_given_point_and_can_be_removed(client, use_session, user):
+    h = {"X-Rilla-Token": user.token}
+    r = client.post("/api/demo", json={"lat": 12.9591, "lon": 77.5776}, headers=h)  # K R Market
+    assert r.status_code == 200 and r.json()["added"] == 10
+    near = client.get("/api/near?lat=12.9591&lon=77.5776&radius=8000&limit=20", headers=h).json()["items"]
+    assert near and min(i["distance_m"] for i in near) < 2500  # the sample sits around you, not around Indiranagar
+    assert client.post("/api/demo", json={}, headers=h).json()["added"] == 0  # idempotent
+    plan = client.get("/api/plan?lat=12.9591&lon=77.5776&minutes=300", headers=h).json()
+    assert plan["stops"] and plan["candidates"] >= len(plan["stops"])
+    assert client.delete("/api/demo", headers=h).json()["removed"] == 10
+    empty = client.get("/api/plan?lat=12.9591&lon=77.5776&minutes=180", headers=h).json()
+    assert empty["stops"] == [] and empty["candidates"] == 0 and empty["radius_m"] == 6000

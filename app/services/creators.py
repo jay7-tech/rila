@@ -29,10 +29,15 @@ def creator_stats(session: Session, user: User, now: datetime, events: Optional[
         if i.grounded:
             grounded[i.creator] = grounded.get(i.creator, 0) + 1
     dropped: Dict[str, int] = {}
+    doc_grounded: Dict[str, int] = {}
     for d in docs:
-        c = (d.meta or {}).get("creator")
+        meta = d.meta or {}
+        c = meta.get("creator")
         if c:
-            dropped[c] = dropped.get(c, 0) + int((d.meta or {}).get("ungrounded_dropped", 0))
+            dropped[c] = dropped.get(c, 0) + int(meta.get("ungrounded_dropped", 0))
+            if "grounded_kept" in meta:  # exact count recorded when the video was read; older documents fall back to counting items
+                doc_grounded[c] = doc_grounded.get(c, 0) + int(meta["grounded_kept"])
+    grounded.update(doc_grounded)
     by_creator: Dict[str, list] = {}
     for e in events:
         if e.creator:

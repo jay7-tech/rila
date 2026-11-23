@@ -117,6 +117,9 @@ def plan_for_user(
         radius_m=radius_m, query_category=category, limit=40, trust=creators_svc.trust_map(session, user, now, events),
     )
     out = planner.plan_to_dict(planner.plan_route(recs, lat, lon, now, minutes, mode))
+    out["candidates"] = sum(1 for r in recs if r.offer.lat is not None)  # saved places within reach, before fitting the time
+    out["radius_m"] = radius_m
+    out["unpinned"] = sum(1 for r in recs if r.offer.lat is None)
     for stop in out["stops"]:
         it = items[stop["id"]]
         stop.update(venue=it.venue, area=it.area, price=it.price_text)

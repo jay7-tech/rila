@@ -273,6 +273,20 @@
     drawMap(state.places.map(function (pl, n) { return { id: 'p' + n, title: pl.name, category: pl.categories[0] || 'other', status: pl.live_offers.length ? 'active' : 'open_ended', time_left: pl.reels + ' reel(s)', lat: pl.geo === 'none' ? null : pl.lat, lon: pl.lon }; }));
   }
 
+  // Sample data around you, so every screen can be tried before you have saved anything
+  function demoButtons(into) {
+    var row = el('div', { class: 'filters', role: 'group', 'aria-label': 'Sample data' });
+    var add = el('button', { class: 'ghost', type: 'button', text: 'Add sample places around me' });
+    add.onclick = function () {
+      add.disabled = true;
+      var body = state.loc ? { lat: state.loc.lat, lon: state.loc.lon } : {};
+      api('/api/demo', { method: 'POST', body: body }).then(function () { load(); }).catch(function (e) { add.disabled = false; fail(e); });
+    };
+    var rm = el('button', { class: 'ghost', type: 'button', text: 'Remove sample data' });
+    rm.onclick = function () { rm.disabled = true; api('/api/demo', { method: 'DELETE' }).then(function () { load(); }).catch(function (e) { rm.disabled = false; fail(e); }); };
+    row.appendChild(add); row.appendChild(rm); into.appendChild(row);
+  }
+
   // Plan: an ordered outing that fits the time you have
   function loadPlan() {
     if (!state.loc) { renderLocate(); return; }
@@ -289,7 +303,11 @@
     });
     L.appendChild(f);
     if (!d.stops.length) {
-      L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Nothing fits yet' }), el('span', { text: 'Try more time, or save places near you. Visited and hidden places are left out.' })]));
+      var why = d.candidates === 0
+        ? 'None of your saved places are within ' + (d.radius_m / 1000) + ' km of where you are now' + (d.unpinned ? ' (' + d.unpinned + ' have no map pin yet)' : '') + '. Move, or add sample places around you.'
+        : d.candidates + ' saved place(s) are near you but none fit in this time. Try more time.';
+      L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Nothing fits yet' }), el('span', { text: why + ' Visited and hidden places are left out.' })]));
+      demoButtons(L);
       drawMap([]); return;
     }
     L.appendChild(el('p', { class: 'note', text: d.stops.length + ' stops, about ' + Math.round(d.total_minutes) + ' minutes in all (' + Math.round(d.travel_minutes) + ' travelling).' + (d.skipped ? ' ' + d.skipped + ' did not fit.' : '') }));
@@ -312,6 +330,7 @@
   function renderYou() {
     var L = document.getElementById('left'); L.textContent = '';
     document.getElementById('mapcard').hidden = true;
+    demoButtons(L);
     L.appendChild(el('div', {}, [el('h1', { text: 'What Rilla has learned' }), el('p', { class: 'sub', text: 'From what you save, like, visit and hide. Nothing is hidden from you, and it never leaves your account.' })]));
     Promise.all([api('/api/me/interests'), api('/api/creators')]).then(function (r) {
       var rows = r[0].interests.filter(function (x) { return x.evidence > 0 || x.saved > 0; });

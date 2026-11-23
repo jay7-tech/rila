@@ -76,7 +76,7 @@ def process_url(
         doc_row = Document(
             user_id=user.id, kind=d.kind, source_url=url[:2000], language=d.language, duration=d.duration,
             timeline=[sg.model_dump(mode="json") for sg in d.segments],
-            meta={**dict(d.meta or {}), "creator": ing.creator, "kept": len(ex.items), "ungrounded_dropped": int(ex.stats.get("ungrounded_dropped", 0))},
+            meta={**dict(d.meta or {}), "creator": ing.creator, "kept": len(ex.items), "grounded_kept": sum(1 for x in ex.items if x.grounded), "ungrounded_dropped": int(ex.stats.get("ungrounded_dropped", 0))},
             created_at=now,
         )
         session.add(doc_row)

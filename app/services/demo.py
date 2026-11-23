@@ -41,9 +41,9 @@ def seed_demo(session: Session, user: User, now: datetime, centre: Optional[Tupl
         return 0
     lat0, lon0 = centre or ((user.last_lat, user.last_lon) if user.last_lat is not None else DEFAULT_CENTRE)
     made, by_name = 0, {}
-    for creator, (grounded, dropped) in _RECORD.items():
+    for creator, (grounded, dropped) in _RECORD.items():  # the reading history that trust is computed from
         session.add(Document(user_id=user.id, kind="video", source_url=DEMO_PREFIX + "creator/" + creator, timeline=[],
-                             meta={"creator": creator, "ungrounded_dropped": dropped, "demo": True}, created_at=now))
+                             meta={"creator": creator, "grounded_kept": grounded, "ungrounded_dropped": dropped, "demo": True}, created_at=now))
     for name, kind, cat, creator, dlat, dlon, price, summary, hours, reel in _ROWS:
         item = Item(
             user_id=user.id, kind=kind, category=cat, title=name if kind == "place" else f"{name}: {price}",
@@ -56,13 +56,6 @@ def seed_demo(session: Session, user: User, now: datetime, centre: Optional[Tupl
         by_name.setdefault(name, item)
         made += 1
     session.flush()
-    # grounded counts per creator come from items; top up so the demo record matches _RECORD
-    for creator, (grounded, _dropped) in _RECORD.items():
-        have = sum(1 for r in _ROWS if r[3] == creator)
-        for k in range(max(grounded - have, 0)):
-            session.add(Item(user_id=user.id, kind="place", category="food", title=f"{creator} extra {k}", normalized=f"{creator} extra {k}",
-                             venue=f"{creator} extra {k}", venue_en=f"{creator} extra {k}", city="Bengaluru", lat=None, lon=None, geo_status="none",
-                             source_url=f"{DEMO_PREFIX}extra/{creator}/{k}", creator=creator, confidence=0.8, grounded=True, created_at=now))
     for name, action, times in _REACTIONS:
         it = by_name[name]
         for k in range(times):
