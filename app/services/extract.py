@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 from ..config import get_settings
 from ..core.chunking import chunk_lines
 from ..core.document import parse_rendered
+from ..core.facts import check_dates, verify_price
 from ..core.grounding import ground, looks_like_deal, looks_like_handle, name_in_source, name_line, strip_location_suffix, trim_name_fragment
 from ..core.text import normalize
 from ..signals.models import ExtractedSignal
@@ -258,6 +259,26 @@ def _ground(result: ExtractionResult, caption: str, transcript: str) -> Extracti
     return result
 
 
+def _verify_facts(result: ExtractionResult, caption: str, transcript: str, now: datetime, posted_at: Optional[datetime]) -> ExtractionResult:
+    """Check prices against the source and repair dates with code (the model is bad at date arithmetic)."""
+    source = " ".join([caption or "", transcript or ""])
+    st = result.stats
+    for it in result.items:
+        ok = verify_price(it.price_text, source)
+        if ok is False:
+            it.price_text = None  # a number nobody said or showed
+            it.confidence = max(0.0, it.confidence - 0.1)
+            st["price_dropped"] = st.get("price_dropped", 0) + 1
+        starts, ends, notes = check_dates(it.kind, parse_start(it.starts_at), parse_dt(it.ends_at),
+                                          [it.duration_text, it.evidence, it.summary], now, posted_at)
+        if notes:
+            it.starts_at = starts.isoformat(timespec="minutes") if starts else None
+            it.ends_at = ends.isoformat(timespec="minutes") if ends else None
+            for n in notes:
+                st[n] = st.get(n, 0) + 1
+    return result
+
+
 def _extract_once(call: Callable[[str, str], str], system: str, user: str) -> Optional[ExtractionResult]:
     """One LLM call, validated, with one retry on bad JSON."""
     error = ""
@@ -331,4 +352,5 @@ def extract(
     merged.items = _dedupe(merged.items)
     merged = _tidy_names(merged)
     merged = _ground(merged, caption or "", transcript or "")
+    merged = _verify_facts(merged, caption or "", transcript or "", now, posted_at)
     return _clean(merged, min_conf)
