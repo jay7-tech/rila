@@ -3,53 +3,68 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Rilla</title>
-<meta name="theme-color" content="#0B7A83">
+<title>Rila</title>
+<meta name="theme-color" content="#1D3FD1">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@75..150,500..900&family=Figtree:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="brand">Ril<span>l</span>a</div>
+<div class="shell">
+  <aside class="rail">
+    <div class="brand"><svg class="logo" viewBox="0 0 440 150" role="img" aria-label="Rila"><rect width="440" height="150" rx="36" fill="#D9FF3F"/><path class="ink" fill="#0E0E0E" transform="translate(37.3 114.4)" d="M5.8 -62.7H36.5V-41.0Q36.7 -41.6 37.0 -42.2Q38.7 -45.8 41.5 -49.7Q44.3 -53.6 48.4 -57.0Q52.5 -60.4 57.8 -62.5Q63.1 -64.6 69.5 -64.6V-39.0Q61.2 -39.0 54.3 -37.5Q47.4 -36.0 42.5 -33.9Q38.8 -32.3 36.5 -30.7V0.0H5.8Z M110.6 -95.6V-76.4H78.1V-95.6ZM79.0 -62.7H109.7V0.0H79.0Z M124.3 -88.3H155.1V0.0H124.3Z M214.0 1.8Q200.1 1.8 189.4 -2.1Q178.6 -6.0 172.4 -13.4Q166.2 -20.9 166.2 -31.4Q166.2 -42.4 172.4 -49.8Q178.6 -57.2 189.4 -60.9Q200.1 -64.6 214.0 -64.6Q229.3 -64.6 240.5 -60.5Q251.7 -56.3 257.9 -48.9Q259.9 -46.2 261.3 -43.3V-62.7H292.0V0.0H263.1L262.7 -2.9Q262.2 -5.9 261.8 -11.4Q261.4 -15.1 261.3 -19.7Q260.9 -18.8 260.4 -17.9Q257.0 -11.8 250.4 -7.4Q243.9 -2.9 234.7 -0.6Q225.5 1.8 214.0 1.8ZM225.5 -17.7Q235.2 -17.7 243.3 -18.9Q251.5 -20.1 256.4 -23.0Q261.3 -26.0 261.3 -31.4Q261.3 -36.9 256.4 -39.8Q251.5 -42.8 243.3 -43.9Q235.2 -45.1 225.5 -45.1Q212.4 -45.1 205.3 -41.7Q198.1 -38.3 198.1 -31.4Q198.1 -26.9 201.3 -23.8Q204.5 -20.7 210.6 -19.2Q216.8 -17.7 225.5 -17.7Z"/><path transform="translate(40 0)" class="play" d="M311.2 54.1L311.2 111.9L363.1 83.0Z" fill="#0E0E0E" stroke="#0E0E0E" stroke-width="6.9" stroke-linejoin="round"/></svg></div>
     <nav class="tabs" id="tabs" aria-label="Views"></nav>
-  </header>
-
-  <section class="card" id="add" aria-label="Add something">
-    <div class="modes" role="group" aria-label="What are you adding?">
-      <button class="chip" type="button" data-mode="link" aria-pressed="true">Link</button>
-      <button class="chip" type="button" data-mode="file" aria-pressed="false">Video, audio or screenshot</button>
-      <button class="chip" type="button" data-mode="text" aria-pressed="false">Text</button>
+    <div class="tools">
+      <button class="tool" id="searchbtn" type="button" aria-label="Search everything you saved (press /)">Search</button>
+      <button class="tool" id="themebtn" type="button" aria-label="Switch between light and dark">Theme</button>
     </div>
-    <form id="addform" class="addrow" data-pane="link">
-      <label for="url" class="sr">Video link</label>
-      <input id="url" type="url" inputmode="url" placeholder="Paste an Instagram, YouTube, Facebook, X or TikTok link" required>
-      <button class="cta" type="submit">Save it</button>
-    </form>
-    <form id="fileform" class="addrow" data-pane="file" hidden>
-      <label for="file" class="sr">Video, audio clip or screenshot</label>
-      <input id="file" type="file" accept="video/*,audio/*,image/*" required>
-      <button class="cta" type="submit">Read it</button>
-    </form>
-    <form id="textform" class="addrow" data-pane="text" hidden>
-      <label for="text" class="sr">Text to read</label>
-      <textarea id="text" rows="3" minlength="10" maxlength="20000" placeholder="Paste a caption, message or post in any language" required></textarea>
-      <button class="cta" type="submit">Read it</button>
-    </form>
-    <p class="note" id="addmsg" role="status" aria-live="polite"></p>
-  </section>
+  </aside>
 
-  <div class="grid">
-    <div class="col" id="left"></div>
-    <div class="col">
-      <div class="mapcard" id="mapcard">
-        <div id="map" role="application" aria-label="Map of your saved items"></div>
-        <div class="legend" id="legend"></div>
+  <main class="wrap">
+    <section class="add" id="add" aria-label="Save something">
+      <div class="modes" role="group" aria-label="What are you saving?">
+        <button class="chip" type="button" data-mode="link" aria-pressed="true">Link</button>
+        <button class="chip" type="button" data-mode="file" aria-pressed="false">Video, audio or screenshot</button>
+        <button class="chip" type="button" data-mode="text" aria-pressed="false">Text</button>
+      </div>
+      <form id="addform" class="addrow" data-pane="link">
+        <label for="url" class="sr">Video link</label>
+        <input id="url" type="url" inputmode="url" placeholder="Paste an Instagram, YouTube, Facebook, X or TikTok link" required>
+        <button class="cta" type="submit">Save it</button>
+      </form>
+      <form id="fileform" class="addrow" data-pane="file" hidden>
+        <label for="file" class="sr">Video, audio clip or screenshot</label>
+        <input id="file" type="file" accept="video/*,audio/*,image/*" required>
+        <button class="cta" type="submit">Read it</button>
+      </form>
+      <form id="textform" class="addrow" data-pane="text" hidden>
+        <label for="text" class="sr">Text to read</label>
+        <textarea id="text" rows="3" minlength="10" maxlength="20000" placeholder="Paste a caption, message or post in any language" required></textarea>
+        <button class="cta" type="submit">Read it</button>
+      </form>
+      <p class="note" id="addmsg" role="status" aria-live="polite"></p>
+    </section>
+
+    <div class="grid">
+      <div class="col" id="left"></div>
+      <div class="col">
+        <div class="mapcard" id="mapcard">
+          <div id="map" role="application" aria-label="Map of your saved items"></div>
+          <div class="legend" id="legend"></div>
+        </div>
       </div>
     </div>
+  </main>
+</div>
+
+<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Search everything you saved" hidden>
+  <div class="pal-box">
+    <label for="palq" class="sr">Search</label>
+    <input id="palq" type="search" autocomplete="off" maxlength="120" placeholder="Try biryani, quiet cafe, weekend sale">
+    <ul class="pal-list" id="pallist"></ul>
+    <p class="note" id="palnote">Matches words and meaning, and forgives typos. Esc to close.</p>
   </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

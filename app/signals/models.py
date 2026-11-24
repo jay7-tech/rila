@@ -1,4 +1,4 @@
-"""Signal types for Rilla's "what is it like there right now" engine.
+"""Signal types for Rila's "what is it like there right now" engine.
 
 A *signal* is a short-lived, timestamped observation about an area
 (crowd level, weather on the ground, a hazard, an opening...) extracted

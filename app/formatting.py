@@ -83,7 +83,7 @@ def saved_message(items: List[dict], limit: int = 10) -> str:
 
 
 HELP = (
-    "Rilla turns reels into a map of offers and places around you.\n\n"
+    "Rila turns reels into a map of offers and places around you.\n\n"
     "Forward or paste an Instagram reel or YouTube short link and I will save it.\n"
     "Share your location to see what is near you.\n\n"
     "/near  what is close to your last location\n"

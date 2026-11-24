@@ -1,15 +1,22 @@
 """Text embeddings for semantic search (small ONNX model, no PyTorch).
 
-The model (BAAI/bge-small-en-v1.5, 384 dimensions) downloads once on first
-use into FASTEMBED_CACHE_PATH. Other modules call these functions through
-the module so tests can replace them.
+The model is EMBED_MODEL (default BAAI/bge-small-en-v1.5, English). It downloads once on first use into
+FASTEMBED_CACHE_PATH. The database column is vector(384), so any model used here must output 384 numbers:
+  - BAAI/bge-small-en-v1.5                                      English only (default)
+  - sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2  50+ languages incl. Hindi, Marathi, Gujarati,
+                                                                 Urdu; NOT Kannada, Tamil or Telugu
+Vectors from different models are not comparable, so after changing EMBED_MODEL run `python -m app.cli reembed`.
+Other modules call these functions through the module so tests can replace them.
 """
 from __future__ import annotations
 
 import math
 from typing import List, Optional, Sequence
 
+from ..config import get_settings
 from ..models import Item
+
+EMBED_DIM = 384
 
 _model = None
 
@@ -19,7 +26,13 @@ def _get_model():
     if _model is None:
         from fastembed import TextEmbedding
 
-        _model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+        name = get_settings().embed_model
+        model = TextEmbedding(model_name=name)
+        dim = len(next(iter(model.embed(["dimension check"]))))
+        if dim != EMBED_DIM:
+            raise ValueError(f"EMBED_MODEL {name} outputs {dim} numbers but the database column holds {EMBED_DIM}. "
+                             f"Pick a {EMBED_DIM}-dimension model, or add a migration to change the column first.")
+        _model = model
     return _model
 
 

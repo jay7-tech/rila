@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from .. import db as dbmod
 from ..models import Event, Item, Signal, User
-from ..recs import learner
+from ..recs import learner, reliability, retrieval, taste
 from ..recs.offers import Offer, status, time_left_label
 from ..recs import planner
 from ..recs.ranking import haversine_m, recommend
@@ -19,6 +19,7 @@ from ..signals.freshness import age_label
 from ..signals.models import Signal as SignalModel
 from . import creators as creators_svc
 from . import embeddings
+from . import places as places_svc
 from .process import norm
 
 SIGNAL_WINDOW = timedelta(hours=72)
@@ -51,6 +52,77 @@ def serialize_item(item: Item, now: datetime, distance_m: Optional[float] = None
         "venue_en": item.venue_en, "evidence": item.evidence, "evidence_source": item.evidence_source,
         "evidence_at": item.evidence_at, "grounded": item.grounded,
     }
+
+
+def _taste_dict(i: Item) -> dict:
+    return {"category": i.category, "kind": i.kind, "creator": i.creator, "area": i.area, "city": i.city,
+            "price": i.price_text, "evidence_source": i.evidence_source, "title": i.title, "summary": i.summary}
+
+
+def taste_model(user_items_by_id: dict, events: List[Event], now: datetime) -> taste.Taste:
+    """Retrain the user's taste model from their event log (cheap, deterministic, nothing stored)."""
+    ex = [(e.action, _taste_dict(user_items_by_id[e.item_id]), e.created_at) for e in events if e.item_id in user_items_by_id]
+    return taste.train(ex, now)
+
+
+def annotate(session: Session, user: User, now: datetime, rows: List[dict]) -> List[dict]:
+    """Add a transparent reliability score to serialized items (needs creator trust and how many reels mention the place)."""
+    if not rows:
+        return rows
+    trust = creators_svc.trust_map(session, user, now)
+    mentions: dict = {}
+    for i in user_items(session, user):
+        k = places_svc.name_key(i)
+        if k:
+            mentions.setdefault(k, set()).add(i.document_id or -i.id)
+    by_id = {i.id: i for i in user_items(session, user)}
+    for r in rows:
+        i = by_id.get(r["id"])
+        if i is None:
+            continue
+        parts = reliability.components(i.grounded, i.evidence_source, None, i.geo_status or "none",
+                                       trust.get(i.creator or "", 0.5), len(mentions.get(places_svc.name_key(i), ())) or 1)
+        s = reliability.score(parts)
+        r["reliability"] = {"score": s, "label": reliability.label(s), "parts": reliability.breakdown(parts)}
+    return rows
+
+
+def for_you(session: Session, user: User, now: datetime, lat: Optional[float] = None, lon: Optional[float] = None,
+            limit: int = 12, radius_m: float = 8000) -> dict:
+    """A feed ranked by learned taste p(like), the usual rank score (distance/urgency) and a small exploration bonus,
+    then diversified with MMR so one venue or category does not fill the page."""
+    items = {i.id: i for i in user_items(session, user) if status(item_to_offer(i), now) != "expired"}
+    events = user_events(session, user)
+    model = taste_model({i.id: i for i in user_items(session, user)}, events, now)
+    dismissed = {e.item_id for e in events if e.action == "dismiss" and e.item_id}
+    seen = {e.item_id for e in events if e.item_id}
+    rank_score: dict = {}
+    dist: dict = {}
+    if lat is not None and lon is not None:
+        offers = [item_to_offer(i) for i in items.values() if i.id not in dismissed]
+        for r in recommend(offers, lat, lon, now, interests=learned_interests(user, events, now, {i.category for i in items.values()}),
+                           radius_m=radius_m, limit=len(offers) or 1, trust=creators_svc.trust_map(session, user, now, events)):
+            rank_score[r.offer.id] = r.score
+            dist[r.offer.id] = r.distance_m
+    cand = [i for i in items.values() if i.id not in dismissed and (not rank_score or i.id in rank_score)]
+    rel: dict = {}
+    why: dict = {}
+    for i in cand:
+        p = model.predict(_taste_dict(i)) if not model.cold else 0.5
+        explore = 0.08 if i.id not in seen else 0.0
+        rel[i.id] = (0.55 * p if not model.cold else 0.0) + 0.45 * rank_score.get(i.id, 0.3) + explore
+        why[i.id] = [f"{'likes' if r['weight'] > 0 else 'less into'} {taste.feature_text(r['feature'])}" for r in model.explain(_taste_dict(i))] if not model.cold else []
+        if explore:
+            why[i.id].append("new to you")
+    feats = {i.id: {"c:" + i.category, "v:" + (places_svc.name_key(i) or str(i.id)), "k:" + i.creator.lower() if i.creator else ""} - {""} for i in cand}
+    venues = {i.id: places_svc.name_key(i) for i in cand}
+    order = retrieval.mmr(rel, retrieval.item_similarity(feats, venues), limit, lam=0.75)
+    rows = [serialize_item(items[i], now, dist.get(i), why[i]) for i in order]
+    for r in rows:
+        r["taste"] = None if model.cold else round(model.predict(_taste_dict(items[r["id"]])), 3)
+    return {"items": annotate(session, user, now, rows), "cold": model.cold, "trained_on": model.n,
+            "learned": {} if model.cold else {k: [dict(feature=taste.feature_text(x["feature"]), weight=x["weight"]) for x in v]
+                                              for k, v in model.top_features().items()}}
 
 
 def user_items(session: Session, user: User) -> List[Item]:
@@ -99,7 +171,7 @@ def recommend_for_user(
         interests=learned_interests(user, events, now, {i.category for i in items.values()}),
         radius_m=radius_m, query_category=category, limit=limit, trust=creators_svc.trust_map(session, user, now, events),
     )
-    return [serialize_item(items[r.offer.id], now, r.distance_m, r.reasons, r.label) for r in recs]
+    return annotate(session, user, now, [serialize_item(items[r.offer.id], now, r.distance_m, r.reasons, r.label) for r in recs])
 
 
 def plan_for_user(
@@ -154,45 +226,37 @@ def search_saved(
     session: Session, user: User, query: str, now: datetime,
     lat: Optional[float] = None, lon: Optional[float] = None, limit: int = 10,
 ) -> List[dict]:
-    """Hybrid search: meaning (embeddings) plus exact words. Expired offers are hidden."""
-    terms = norm(query).split()
-    scored = []
-    vec = None
+    """BM25F (words, typo tolerant) + dense vectors (meaning), fused with RRF and diversified with MMR. Expired offers are hidden."""
+    items = {i.id: i for i in user_items(session, user) if status(item_to_offer(i), now) != "expired"}
+    if not items or not norm(query):
+        return []
+    dist: dict = {}
     try:
         vec = embeddings.embed_query(query)
     except Exception:
-        vec = None  # model unavailable: fall back to keywords only
+        vec = None  # model unavailable: words only
     if vec is not None and dbmod.is_postgres(session.get_bind()):
         rows = session.execute(
-            select(Item, Item.embedding.cosine_distance(vec).label("dist"))
-            .where(Item.user_id == user.id, Item.embedding.is_not(None))
-            .order_by("dist").limit(limit * 5)
+            select(Item.id, Item.embedding.cosine_distance(vec).label("dist"))
+            .where(Item.user_id == user.id, Item.embedding.is_not(None)).order_by("dist").limit(limit * 8)
         ).all()
-        dist = {r[0].id: float(r[1]) for r in rows}
+        dist = {r[0]: float(r[1]) for r in rows}
     elif vec is not None:
-        dist = {
-            i.id: embeddings.cosine_distance(vec, i.embedding)
-            for i in user_items(session, user) if i.embedding
-        }
-    else:
-        dist = {}
-    for i in user_items(session, user):
-        if status(item_to_offer(i), now) == "expired":
-            continue
-        kw = bool(terms) and all(t in _hay(i) for t in terms)
-        d = dist.get(i.id)
-        if d is None and not kw:
-            continue
-        if d is not None and d > SEMANTIC_MAX_DISTANCE and not kw:
-            continue
-        score = (d if d is not None else 0.5) - (KEYWORD_BONUS if kw else 0.0)
-        scored.append((score, i))
-    scored.sort(key=lambda p: p[0])
+        dist = {i.id: embeddings.cosine_distance(vec, i.embedding) for i in items.values() if i.embedding}
+    docs = {
+        i.id: {"venue": i.venue_en or i.venue or "", "title": i.title, "category": i.category, "area": i.area or "", "city": i.city or "",
+               "price": i.price_text or "", "summary": i.summary or ""}
+        for i in items.values()
+    }
+    venues = {i.id: norm(i.venue_en or i.venue or "") for i in items.values()}
+    hits = retrieval.search(docs, query, dist, k=limit, dense_max=SEMANTIC_MAX_DISTANCE, venues=venues)
     out = []
-    for _, i in scored[:limit]:
+    for h in hits:
+        i = items[h["id"]]
         dm = haversine_m(lat, lon, i.lat, i.lon) if None not in (lat, lon, i.lat, i.lon) else None
-        out.append(serialize_item(i, now, dm))
-    return out
+        why = (["matches " + ", ".join(h["terms"])] if h["terms"] else []) + (["similar meaning"] if h["semantic"] else [])
+        out.append(serialize_item(i, now, dm, reasons=why))
+    return annotate(session, user, now, out)
 
 
 def briefing_for(session: Session, place: str, now: datetime) -> dict:

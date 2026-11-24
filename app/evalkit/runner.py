@@ -79,6 +79,7 @@ def report(result: Dict) -> str:
         f"Cases: {m['cases']}   precision {m['precision']:.2f}   recall {m['recall']:.2f}   F1 {m['f1']:.2f}",
         f"Kind accuracy {m['kind_accuracy']:.2f}   grounded {m['grounded_rate']:.2f}   "
         f"unverified {m['unverified_rate']:.2f}   ungrounded (dropped) {m['ungrounded_rate']:.2f}",
+        f"Calibration: Brier {m['brier']}   ECE {m['ece']}   (lower is better; None = no predictions)",
         "",
     ]
     for c in result["cases"]:

@@ -29,6 +29,7 @@ class Settings:
     asr_engine: str  # auto (Groq Whisper when GROQ_API_KEY is set, else local) | groq | local
     groq_asr_model: str
     ocr_min_conf_nonlatin: float  # stricter bar for non-Latin lines: Tesseract invents them on busy video
+    embed_model: str  # fastembed model name; must output EMBED_DIM numbers
     ocr_langs: str  # tesseract language codes joined with '+', e.g. eng+hin+kan
     ocr_min_conf: float  # drop OCR words below this confidence (0-100)
     max_frames: int  # frames sampled per video for on-screen text
@@ -61,6 +62,7 @@ def get_settings() -> Settings:
         asr_engine=e("ASR_ENGINE", "auto").strip().lower(),
         groq_asr_model=e("GROQ_ASR_MODEL", "whisper-large-v3").strip(),
         ocr_min_conf_nonlatin=float(e("OCR_MIN_CONF_NONLATIN", "75")),
+        embed_model=e("EMBED_MODEL", "BAAI/bge-small-en-v1.5").strip(),
         ocr_langs=e("OCR_LANGS", "eng+hin+kan+tel").strip(),
         ocr_min_conf=float(e("OCR_MIN_CONF", "60")),
         max_frames=int(e("MAX_FRAMES", "30")),

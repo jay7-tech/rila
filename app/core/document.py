@@ -1,4 +1,4 @@
-"""One shape for everything Rilla perceives: caption, speech, on-screen text, pasted text.
+"""One shape for everything Rila perceives: caption, speech, on-screen text, pasted text.
 
 A VideoDocument is a timeline of Segments. Every later stage (extraction, grounding,
 chunking, retrieval, evaluation) reads this and nothing else, so adding a new kind of

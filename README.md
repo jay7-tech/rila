@@ -1,8 +1,10 @@
-# Rilla
+<p align="center"><img src="web/logo.svg" alt="Rila" width="180"></p>
 
-Rilla turns the videos you watch into a map of offers, places and live local conditions.
+# Rila
 
-Give it anything: a reel or short link, an uploaded video or audio clip, a screenshot, or pasted text, in any language. Rilla listens (language detected automatically), reads the words on screen, extracts what is on offer (venue, price, start and end time), checks every fact against a quote from the source, finds it on the map, and brings it back when you are near or when it is about to end.
+Rila turns the videos you watch into a map of offers, places and live local conditions.
+
+Give it anything: a reel or short link, an uploaded video or audio clip, a screenshot, or pasted text, in any language. Rila listens (language detected automatically), reads the words on screen, extracts what is on offer (venue, price, start and end time), checks every fact against a quote from the source, finds it on the map, and brings it back when you are near or when it is about to end.
 
 ## How it works
 
@@ -40,7 +42,7 @@ docker compose exec api python -m app.cli doctor        # checks every dependenc
 docker compose exec api python -m app.cli make-user "Your Name"   # prints your sign-in link
 ```
 
-Open the link. Add a video link, upload a file, paste a screenshot (Ctrl+V anywhere on the page) or paste text. On Android, open the app in Chrome, choose Install, and "Share to Rilla" appears in other apps' share sheets (iPhone does not support this yet; paste the link instead).
+Open the link. Add a video link, upload a file, paste a screenshot (Ctrl+V anywhere on the page) or paste text. On Android, open the app in Chrome, choose Install, and "Share to Rila" appears in other apps' share sheets (iPhone does not support this yet; paste the link instead).
 
 After the first build, code, page and migration changes need only `docker compose restart api worker` (the override file mounts them). Rebuild only when `requirements.txt` or the `Dockerfile` change.
 
@@ -102,7 +104,7 @@ docker compose --profile test run --rm tests
 - Geocoding uses public Nominatim (1 request per second, cached); an own place database (Overture) is planned.
 - Each worker processes one video at a time; run more workers for more throughput.
 
-The full architecture and roadmap is the "Rilla: Architecture and Build Roadmap" document.
+The full architecture and roadmap is the "Rila: Architecture and Build Roadmap" document.
 
 ## Speech and OCR engines
 - `ASR_ENGINE=auto` (default) uses Groq Whisper large-v3 when `GROQ_API_KEY` is set, otherwise local faster-whisper. If Groq fails it falls back to local. **Audio is sent to Groq unless `ASR_ENGINE=local`.**
@@ -113,12 +115,27 @@ The full architecture and roadmap is the "Rilla: Architecture and Build Roadmap"
 - **Near me / All saved:** ranked by distance, time left, your learned tastes and how reliable the creator is. Each card has *Like*, *I went* and *Not for me*; hidden items disappear from Near me and from plans.
 - **Places:** the same venue seen in several reels is merged into one card (reels, creators, prices, live offers, best proof). `GET /api/places`.
 - **Plan:** `GET /api/plan?lat=&lon=&minutes=` picks the best nearby saved places and orders them into a route that fits your time, respecting offer start and end times. Times are estimates from straight-line distance.
-- **You:** shows what Rilla has learned (interest per category) and how reliable each creator is, with the numbers behind it. `GET /api/me/interests`, `GET /api/creators`.
+- **You:** shows what Rila has learned (interest per category) and how reliable each creator is, with the numbers behind it. `GET /api/me/interests`, `GET /api/creators`.
 - Feedback is stored in a new `events` table (migration 0003). Run `docker compose up -d migrate` or restart the stack to apply it.
 - UI smoke test: `npm i jsdom && node web/test/ui_smoke.js`.
 
 ## Run everything with one command (Windows)
 From the project folder in PowerShell or Command Prompt:
-- `.\rilla up` starts the stack, checks it, and opens your browser already signed in.
-- `.\rilla demo` adds sample places and offers so the Places, Plan and You tabs have something to show; `.\rilla demo-clear` removes them.
-- `.\rilla status`, `.\rilla logs`, `.\rilla restart`, `.\rilla test`, `.\rilla batch`, `.\rilla eval`, `.\rilla public`, `.\rilla down`. Run `.\rilla help` for the list.
+- `.\rila up` starts the stack, checks it, and opens your browser already signed in.
+- `.\rila demo` adds sample places and offers so the Places, Plan and You tabs have something to show; `.\rila demo-clear` removes them.
+- `.\rila status`, `.\rila logs`, `.\rila restart`, `.\rila test`, `.\rila batch`, `.\rila eval`, `.\rila public`, `.\rila down`. Run `.\rila help` for the list.
+
+## Search, taste and reliability (ML)
+- **Search** (`app/recs/retrieval.py`): BM25F over weighted fields (venue and title count more than the summary) with typo tolerance, fused with dense-vector search by Reciprocal Rank Fusion (k=60), then diversified with Maximal Marginal Relevance so one venue does not fill the page. Falls back to words only if the embedding model is unavailable. Press `/` or Ctrl+K in the app.
+- **Taste model** (`app/recs/taste.py`): online logistic regression over hashed item features (category, creator, area, price band, content words), trained by SGD with L2 and 30-day recency decay from your likes, visits, opens and hides. Retrained on demand from the event log, nothing stored. `GET /api/foryou` blends p(like), the distance/urgency rank score and an exploration bonus, then diversifies, and returns the reasons.
+- **Reliability** (`app/recs/reliability.py`): every saved item carries a transparent 0-1 score (quote found in the video, how it was seen, map pin, creator track record, reels that mention it). Tap the pips on a card to see the parts. `python -m app.cli eval` now also reports Brier score and ECE, so you can check that "high" really means mostly right once you have labelled cases.
+
+## The app
+Seven views: For you (taste-ranked, top pick as a signboard), Near me, Plan (drawn as a metro line with a time budget), Places, Saved, Live conditions, You (taste radar and what the model learned). Light and dark themes, bottom tab bar on phones. UI check: `npm i jsdom && node web/test/ui_smoke.js`.
+
+## Multilingual search and measuring the taste model
+- **Hindi / Hinglish queries:** set `EMBED_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` in `.env` (same 384 size, about 220 MB), run `.\rila restart`, then `.\rila reembed` so every saved item gets a vector from the new model (vectors from different models cannot be compared). It covers Hindi, Marathi, Gujarati and Urdu but not Kannada, Tamil or Telugu; a model that does (multilingual-e5-large, 1024 numbers) needs a migration to widen the column first, and Rila refuses to start it with a clear message until then.
+- **`.\rila recs-eval`** replays your likes and visits in time order and reports hit@k, MRR and NDCG@k for the taste model against a category-count baseline and chance. Needs a few dozen real actions to mean anything.
+
+## Labelling the test videos
+`.\rila label` walks through each unlabelled eval case: it shows the caption, transcript and what the model extracted, and you press Enter if it is right, or fix it with one short command (`d 2` delete, `k 2 offer` change kind, `v 2 New name`, `a place | Name | City` add a missed one, `n` nothing to save, `?` help). Answers are saved to `eval/cases/` after each case. Then `.\rila eval` gives precision, recall, F1 and the calibration numbers.

@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from ..models import GeoCache
 
 NOMINATIM_URL = os.environ.get("NOMINATIM_URL", "https://nominatim.openstreetmap.org/search")
-USER_AGENT = os.environ.get("NOMINATIM_USER_AGENT", "Rilla/0.1 (contact: set NOMINATIM_USER_AGENT)")
+USER_AGENT = os.environ.get("NOMINATIM_USER_AGENT", "Rila/0.1 (contact: set NOMINATIM_USER_AGENT)")
 log = logging.getLogger(__name__)
 MIN_MATCH_SCORE = 65
 MIN_GAP_SECONDS = 1.1
@@ -56,7 +56,7 @@ def _fetch(query: str, limit: int = 3) -> List[dict]:
 def _log_failure(query_text: str, err: Exception) -> None:
     hint = ""
     if isinstance(err, httpx.HTTPStatusError) and err.response.status_code in (403, 429):
-        hint = " (Nominatim refused: set NOMINATIM_USER_AGENT in .env to 'Rilla/0.1 (your-email)')"
+        hint = " (Nominatim refused: set NOMINATIM_USER_AGENT in .env to 'Rila/0.1 (your-email)')"
     log.warning("geocoding failed for %r: %s%s", query_text, err, hint)
 
 

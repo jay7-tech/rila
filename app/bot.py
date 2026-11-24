@@ -40,7 +40,7 @@ def _gate(session, tg_user, args) -> Optional[User]:
 async def _user_or_deny(update: Update, context: ContextTypes.DEFAULT_TYPE, session) -> Optional[User]:
     user = _gate(session, update.effective_user, context.args if context else None)
     if user is None:
-        await update.effective_message.reply_text("Rilla is invite-only for now. Ask for an invite link.")
+        await update.effective_message.reply_text("Rila is invite-only for now. Ask for an invite link.")
     return user
 
 

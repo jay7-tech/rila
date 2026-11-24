@@ -98,7 +98,7 @@ def _check_queue(db: Session, user: User) -> None:
 
 
 def create_app(lifespan=None) -> FastAPI:
-    app = FastAPI(title="Rilla", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Rila", version="0.2.0", lifespan=lifespan)
     signup_limit, submit_limit = RateLimit(10, 3600), RateLimit(30, 600)
     feedback_limit = RateLimit(300, 600)
 
@@ -165,7 +165,7 @@ def create_app(lifespan=None) -> FastAPI:
         lat: Optional[float] = None, lon: Optional[float] = None, include_expired: bool = False,
         user: User = Depends(current_user), db: Session = Depends(get_db),
     ):
-        return {"items": q.list_saved(db, user, utcnow(), category, q_text, lat, lon, include_expired)}
+        return {"items": q.annotate(db, user, utcnow(), q.list_saved(db, user, utcnow(), category, q_text, lat, lon, include_expired))}
 
     @app.get("/api/search")
     def search(
@@ -198,12 +198,12 @@ def create_app(lifespan=None) -> FastAPI:
 
     @app.get("/api/creators")
     def creators(user: User = Depends(current_user), db: Session = Depends(get_db)):
-        """Who Rilla trusts among the creators you save from, and why (quotes verified, dropped, your reactions)."""
+        """Who Rila trusts among the creators you save from, and why (quotes verified, dropped, your reactions)."""
         return {"creators": creators_svc.creator_stats(db, user, utcnow())}
 
     @app.post("/api/items/{item_id}/feedback")
     def feedback(item_id: int, body: FeedbackIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
-        """Record like / dismiss / visit / open. Rilla learns interests from these and hides dismissed items from 'near me'."""
+        """Record like / dismiss / visit / open. Rila learns interests from these and hides dismissed items from 'near me'."""
         item = db.get(Item, item_id)
         if item is None or item.user_id != user.id:
             raise HTTPException(status_code=404, detail="Not found")
@@ -216,9 +216,15 @@ def create_app(lifespan=None) -> FastAPI:
 
     @app.get("/api/me/interests")
     def my_interests(user: User = Depends(current_user), db: Session = Depends(get_db)):
-        """What Rilla has learned about this user, with the evidence, so nothing is hidden."""
+        """What Rila has learned about this user, with the evidence, so nothing is hidden."""
         obs = [(e.action, e.category, e.created_at) for e in q.user_events(db, user)]
         return {"interests": learner.explain(user.interests or {}, obs, utcnow())}
+
+    @app.get("/api/foryou")
+    def foryou(lat: Optional[float] = Query(None, ge=-90, le=90), lon: Optional[float] = Query(None, ge=-180, le=180),
+               limit: int = Query(12, ge=1, le=30), user: User = Depends(current_user), db: Session = Depends(get_db)):
+        """Feed ranked by a taste model trained from the user's own actions, diversified, with reasons and a reliability score."""
+        return q.for_you(db, user, utcnow(), lat, lon, limit)
 
     @app.delete("/api/items/{item_id}")
     def delete_item(item_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
@@ -297,7 +303,7 @@ def create_app(lifespan=None) -> FastAPI:
 
     @app.get("/api/items/{item_id}/source")
     def item_source(item_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
-        """Why Rilla saved this: the quote, where it came from, and the lines around it."""
+        """Why Rila saved this: the quote, where it came from, and the lines around it."""
         item = db.get(Item, item_id)
         if item is None or item.user_id != user.id:
             raise HTTPException(status_code=404, detail="Not found")

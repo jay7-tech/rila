@@ -1,4 +1,4 @@
-"""How far to trust each creator, from evidence Rilla already holds.
+"""How far to trust each creator, from evidence Rila already holds.
 
 For every creator the user has saved from: how many of their items had a quote found in the video (grounded),
 how many items the quote check threw away as invented, and how the user reacted (likes, visits, dismissals).

@@ -1,11 +1,11 @@
-"""Command line tools for running and testing Rilla without any chat app.
+"""Command line tools for running and testing Rila without any chat app.
 
-    python -m app.cli doctor                  check that everything Rilla needs is installed
+    python -m app.cli doctor                  check that everything Rila needs is installed
     python -m app.cli make-user "Suresh"      create a web account and print its sign-in link
     python -m app.cli link "Suresh"           the sign-in link for that name (created if missing); the last line is the link
     python -m app.cli status                  counts, queued and failed jobs, settings in use (no secrets)
     python -m app.cli demo "Suresh"           add sample places, offers and reactions so every screen has something (--clear removes them)
-    python -m app.cli read <link|file|text>   see what Rilla perceives and extracts (no database writes)
+    python -m app.cli read <link|file|text>   see what Rila perceives and extracts (no database writes)
     python -m app.cli capture <document id>   save a processed video as a draft evaluation case
     python -m app.cli batch <links.txt>       read many links, write draft cases and a review sheet
     python -m app.cli eval                    score extraction against the labelled cases
@@ -108,6 +108,56 @@ def cmd_status(_args) -> int:
             print(f"  failed job {j.id}: {(j.error or '')[:110]}")
         print(f"asr {s.asr_engine} ({'groq whisper' if s.asr_engine != 'local' and s.groq_api_key else 'local ' + s.whisper_model}) | ocr {s.ocr_langs} | llm {s.groq_model}")
         print(f"sign-up {'invite code' if s.invite_code else 'open' if s.open_signup else 'closed'} | public url {s.public_url}")
+    return 0
+
+
+def cmd_reembed(args) -> int:
+    """Recompute every item's vector with the current EMBED_MODEL. Needed after switching models."""
+    from sqlalchemy import select
+
+    from .models import Item
+    from .services import embeddings as emb
+
+    with _db() as session:
+        items = list(session.scalars(select(Item)))
+        done = 0
+        for i in range(0, len(items), 32):
+            batch = items[i:i + 32]
+            for it, vec in zip(batch, emb.embed_texts([emb.item_text(x) for x in batch])):
+                it.embedding = vec
+            session.commit()
+            done += len(batch)
+            print(f"  {done}/{len(items)}", end="\r")
+        print(f"re-embedded {done} items with {get_settings().embed_model}")
+    return 0
+
+
+def cmd_recs_eval(args) -> int:
+    """How well does the taste model predict what this user goes on to like? (replays their history)"""
+    from sqlalchemy import select
+
+    from .evalkit import recs_eval
+    from .models import Event, Item, User
+    from .services import query as q
+
+    with _db() as session:
+        user = session.scalar(select(User).where(User.name.ilike(args.name)))
+        if user is None:
+            print(f"No user named {args.name}")
+            return 1
+        items = {i.id: dict(q._taste_dict(i), created_at=i.created_at) for i in q.user_items(session, user)}
+        events = [(e.action, e.item_id, e.created_at) for e in q.user_events(session, user) if e.item_id]
+        print(recs_eval.report(recs_eval.evaluate(items, events, k=args.k)))
+    return 0
+
+
+def cmd_label(args) -> int:
+    """Check the model's draft answers for the eval cases and mark them labelled."""
+    from .evalkit import label
+    from .evalkit.runner import CASES_DIR
+
+    stats = label.run(CASES_DIR, relabel=args.relabel)
+    print(f"labelled {stats['labelled']}, skipped {stats['skipped']}, left {stats['left']}. Now run:  .\\rila eval")
     return 0
 
 
@@ -266,6 +316,14 @@ def main(argv=None) -> int:
     a.add_argument("name")
     a.set_defaults(fn=cmd_link)
     sub.add_parser("status").set_defaults(fn=cmd_status)
+    sub.add_parser("reembed").set_defaults(fn=cmd_reembed)
+    a = sub.add_parser("label")
+    a.add_argument("--relabel", action="store_true")
+    a.set_defaults(fn=cmd_label)
+    a = sub.add_parser("recs-eval")
+    a.add_argument("name")
+    a.add_argument("-k", type=int, default=5)
+    a.set_defaults(fn=cmd_recs_eval)
     a = sub.add_parser("demo")
     a.add_argument("name")
     a.add_argument("--clear", action="store_true")

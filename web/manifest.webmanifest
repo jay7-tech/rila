@@ -1,13 +1,13 @@
 {
-  "name": "Rilla",
-  "short_name": "Rilla",
+  "name": "Rila",
+  "short_name": "Rila",
   "description": "Offers, places and live conditions from the videos you watch, on your own map.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0A1A1D",
-  "theme_color": "#0B7A83",
+  "background_color": "#D9FF3F",
+  "theme_color": "#1D3FD1",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

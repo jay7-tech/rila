@@ -33,7 +33,7 @@ class User(Base):
 
 
 class Document(Base):
-    """What Rilla perceived in one input: the full timeline of caption, speech and on-screen text."""
+    """What Rila perceived in one input: the full timeline of caption, speech and on-screen text."""
 
     __tablename__ = "documents"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

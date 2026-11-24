@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from rapidfuzz import fuzz
 
 from ..core.text import normalize
+from ..recs import reliability
 
 NAME_MATCH = 80  # rapidfuzz ratio (0-100) at which a predicted name counts as the labelled one
 
@@ -24,6 +25,7 @@ class CaseScore:
     ungrounded_dropped: int = 0
     missed: List[str] = field(default_factory=list)
     extra: List[str] = field(default_factory=list)
+    calib: List[Tuple[float, int]] = field(default_factory=list)  # (reliability, 1 if the item matched a labelled one)
 
 
 def _names(item) -> List[str]:
@@ -58,6 +60,8 @@ def score_case(case_id: str, predicted: Sequence, expected: Sequence[dict], drop
     sc.fn = len(expected) - len(used_e)
     sc.extra = [(_names(predicted[i]) or ["?"])[0] for i in range(len(predicted)) if i not in used_p]
     sc.missed = [(_names(expected[j]) or ["?"])[0] for j in range(len(expected)) if j not in used_e]
+    sc.calib = [(reliability.extraction_score(getattr(p, "grounded", None), getattr(p, "evidence_source", None)), 1 if i in used_p else 0)
+                for i, p in enumerate(predicted)]
     for p in predicted:
         if p.grounded is True:
             sc.grounded += 1
@@ -84,4 +88,7 @@ def summarize(scores: Sequence[CaseScore]) -> Dict[str, float]:
         "unverified_rate": _div(sum(s.unverified for s in scores), pred),
         # share of everything the model proposed that the quote check had to throw away
         "ungrounded_rate": _div(dropped, pred + dropped),
+        # does a high reliability score really mean "correct"? lower is better for both
+        "brier": reliability.brier([p for s in scores for p in s.calib]),
+        "ece": reliability.ece([p for s in scores for p in s.calib]),
     }

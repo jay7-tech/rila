@@ -1,4 +1,4 @@
-"""Rank a user's offers/places for 'near me' and 'ask Rilla' recommendations."""
+"""Rank a user's offers/places for 'near me' and 'ask Rila' recommendations."""
 from __future__ import annotations
 
 import math

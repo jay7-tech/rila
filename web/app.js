@@ -2,8 +2,8 @@
   'use strict';
   var CATS = { food: 'Food', store: 'Stores', event: 'Events', education: 'Learning', scheme: 'Schemes', service: 'Services', attraction: 'Places', other: 'Other' };
   var LABEL = { hazard: 'Hazard', weather: 'Weather on the ground', crowd: 'Crowd', traffic: 'Traffic', closure: 'Closed', opening: 'Open', deal: 'Deal', event: 'Event', price: 'Price' };
-  var TABS = [['near', 'Near me'], ['plan', 'Plan'], ['places', 'Places'], ['all', 'All saved'], ['live', 'Live conditions'], ['you', 'You']];
-  var state = { view: 'near', cat: 'all', radius: 3000, sel: null, items: [], loc: null, place: 'Gokarna', briefing: null, msg: '', minutes: 180, plan: null, places: [] };
+  var TABS = [['foryou', 'For you'], ['near', 'Near me'], ['plan', 'Plan'], ['places', 'Places'], ['all', 'Saved'], ['live', 'Live conditions'], ['you', 'You']];
+  var state = { view: 'foryou', feed: null, query: '', cat: 'all', radius: 3000, sel: null, items: [], loc: null, place: 'Gokarna', briefing: null, msg: '', minutes: 180, plan: null, places: [] };
   var token = null, map = null, layer = null, markers = {};
 
   var share = null;
@@ -39,10 +39,14 @@
   function km(m) { return m == null ? 'no pin' : m < 1000 ? m + ' m away' : (m / 1000).toFixed(1) + ' km away'; }
   function note(t) { document.getElementById('addmsg').textContent = t || ''; }
 
+  var LOGO = '<svg class="logo" viewBox="0 0 440 150" role="img" aria-label="Rila"><rect width="440" height="150" rx="36" fill="#D9FF3F"/><path class="ink" fill="#0E0E0E" transform="translate(37.3 114.4)" d="M5.8 -62.7H36.5V-41.0Q36.7 -41.6 37.0 -42.2Q38.7 -45.8 41.5 -49.7Q44.3 -53.6 48.4 -57.0Q52.5 -60.4 57.8 -62.5Q63.1 -64.6 69.5 -64.6V-39.0Q61.2 -39.0 54.3 -37.5Q47.4 -36.0 42.5 -33.9Q38.8 -32.3 36.5 -30.7V0.0H5.8Z M110.6 -95.6V-76.4H78.1V-95.6ZM79.0 -62.7H109.7V0.0H79.0Z M124.3 -88.3H155.1V0.0H124.3Z M214.0 1.8Q200.1 1.8 189.4 -2.1Q178.6 -6.0 172.4 -13.4Q166.2 -20.9 166.2 -31.4Q166.2 -42.4 172.4 -49.8Q178.6 -57.2 189.4 -60.9Q200.1 -64.6 214.0 -64.6Q229.3 -64.6 240.5 -60.5Q251.7 -56.3 257.9 -48.9Q259.9 -46.2 261.3 -43.3V-62.7H292.0V0.0H263.1L262.7 -2.9Q262.2 -5.9 261.8 -11.4Q261.4 -15.1 261.3 -19.7Q260.9 -18.8 260.4 -17.9Q257.0 -11.8 250.4 -7.4Q243.9 -2.9 234.7 -0.6Q225.5 1.8 214.0 1.8ZM225.5 -17.7Q235.2 -17.7 243.3 -18.9Q251.5 -20.1 256.4 -23.0Q261.3 -26.0 261.3 -31.4Q261.3 -36.9 256.4 -39.8Q251.5 -42.8 243.3 -43.9Q235.2 -45.1 225.5 -45.1Q212.4 -45.1 205.3 -41.7Q198.1 -38.3 198.1 -31.4Q198.1 -26.9 201.3 -23.8Q204.5 -20.7 210.6 -19.2Q216.8 -17.7 225.5 -17.7Z"/><path transform="translate(40 0)" class="play" d="M311.2 54.1L311.2 111.9L363.1 83.0Z" fill="#0E0E0E" stroke="#0E0E0E" stroke-width="6.9" stroke-linejoin="round"/></svg>';
+  function logoEl() { var d = el('div', { class: 'brand' }); d.innerHTML = LOGO; return d; }
+
   function showGate(text) {
+    document.body.classList.add('gated');
     var wrap = document.querySelector('.wrap'); wrap.textContent = '';
     var box = el('div', { class: 'gate' }, [
-      el('div', { class: 'brand' }, ['Ril', el('span', { text: 'l' }), 'a']),
+      logoEl(),
       el('p', { text: text })]);
     wrap.appendChild(box);
     fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) {
@@ -67,7 +71,7 @@
   function renderTabs() {
     var nav = document.getElementById('tabs'); nav.textContent = '';
     TABS.forEach(function (t) {
-      var b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.view === t[0]), text: t[1] });
+      var b = el('button', { type: 'button', 'data-tab': t[0], 'aria-pressed': String(state.view === t[0]), text: t[1] });
       b.onclick = function () { state.view = t[0]; state.sel = null; load(); };
       nav.appendChild(b);
     });
@@ -75,7 +79,9 @@
 
   function load() {
     renderTabs();
+    if (state.view === 'foryou') { loadForYou(); return; }
     if (state.view === 'live') { renderLive(); return; }
+    if (state.view === 'search') { renderItems(); return; }
     if (state.view === 'you') { renderYou(); return; }
     if (state.view === 'plan') { loadPlan(); return; }
     if (state.view === 'places') { loadPlaces(); return; }
@@ -93,7 +99,7 @@
 
   function renderLocate() {
     var L = document.getElementById('left'); L.textContent = '';
-    L.appendChild(el('div', {}, [el('h1', { text: 'What is near you?' }), el('p', { class: 'sub', text: 'Share your location and Rilla shows the offers and places you saved that are close, with the ones ending soon first.' })]));
+    L.appendChild(el('div', {}, [el('h1', { text: 'What is near you?' }), el('p', { class: 'sub', text: 'Share your location and Rila shows the offers and places you saved that are close, with the ones ending soon first.' })]));
     var b = el('button', { class: 'cta', type: 'button', text: 'Use my location' });
     b.onclick = locate; L.appendChild(b);
     L.appendChild(el('p', { class: 'note', id: 'locnote' }));
@@ -110,20 +116,95 @@
     }, function () { if (n) n.textContent = 'Location is blocked. Allow it in the browser, or open All saved.'; }, { enableHighAccuracy: true, timeout: 10000 });
   }
 
-  function renderItems() {
+  var PART = { grounded: 'Quote found in the video', evidence: 'How it was seen', proximity: 'Quote next to the name', location: 'Map pin', creator: 'Creator track record', mentions: 'Reels that mention it' };
+  var LEVEL = { high: 'High', medium: 'Medium', low: 'Low' };
+  function meter(rel, hero) {
+    if (!rel) return null;
+    var on = Math.max(1, Math.round(rel.score * 5));
+    var pips = el('span', { class: 'pips', 'aria-hidden': 'true' });
+    for (var k = 1; k <= 5; k++) pips.appendChild(el('i', { class: 'pip' + (k <= on ? ' f' : '') }));
+    var btn = el('button', { type: 'button', 'aria-expanded': 'false', 'aria-label': 'How reliable is this? ' + LEVEL[rel.label] + ', ' + Math.round(rel.score * 100) + ' percent. Show why.' }, [pips, LEVEL[rel.label] + ' ' + Math.round(rel.score * 100) + '%']);
+    var box = el('div', { class: 'meter ' + rel.label }, [btn]);
+    btn.onclick = function (ev) {
+      ev.stopPropagation();
+      var open = box.nextSibling && box.nextSibling.classList && box.nextSibling.classList.contains('parts');
+      if (open) { box.nextSibling.remove(); btn.setAttribute('aria-expanded', 'false'); return; }
+      var parts = el('div', { class: 'parts', role: 'region', 'aria-label': 'Why this reliability score' });
+      parts.addEventListener('click', function (e) { e.stopPropagation(); });
+      rel.parts.forEach(function (p) {
+        parts.appendChild(el('div', { class: 'prow' }, [el('span', { text: PART[p.part] || p.part }),
+          el('span', { class: 'track' }, [el('span', { class: 'fill', style: 'width:' + Math.round(p.value * 100) + '%' })]),
+          el('span', { class: 'pv', text: Math.round(p.value * 100) + '%' })]));
+      });
+      box.parentNode.insertBefore(parts, box.nextSibling); btn.setAttribute('aria-expanded', 'true');
+    };
+    return box;
+  }
+
+  function card(i, hero) {
+    var soon = i.status === 'ending_soon';
+    var meta = [i.price, i.when, i.distance_m != null ? km(i.distance_m) : null, i.creator ? 'from ' + i.creator : null].filter(Boolean);
+    var acts = el('span', { class: 'actions' });
+    var mapsQ = [i.venue_en || i.venue || i.title, i.area, i.city].filter(Boolean).join(', ');
+    if (i.lat != null || mapsQ) {
+      // an approximate pin is only the middle of the area, so search by name instead
+      var href = (i.geo === 'confirmed' && i.lat != null) ? 'https://www.google.com/maps?q=' + i.lat + ',' + i.lon : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapsQ);
+      acts.appendChild(el('a', { href: href, target: '_blank', rel: 'noopener', text: 'Open in Maps' }));
+    }
+    if (i.source_url) acts.appendChild(el('a', { href: i.source_url, target: '_blank', rel: 'noopener', text: 'Original reel' }));
+    var why = el('button', { class: 'ghost', type: 'button', text: 'Why this?' });
+    why.onclick = function (ev) { ev.stopPropagation(); toggleProof(i, why.closest('.rec')); };
+    acts.appendChild(why);
+    [['Like', 'like', 'Liked'], ['I went', 'visit', 'Marked as visited'], ['Not for me', 'dismiss', 'Hidden']].forEach(function (f) {
+      var fbtn = el('button', { class: 'ghost', type: 'button', text: f[0] });
+      fbtn.onclick = function (ev) {
+        ev.stopPropagation(); fbtn.disabled = true;
+        api('/api/items/' + i.id + '/feedback', { method: 'POST', body: { action: f[1] } }).then(function () {
+          fbtn.textContent = f[2]; fbtn.classList.add('on'); if (f[1] !== 'like') setTimeout(load, 400);
+        }).catch(function (err) { fbtn.disabled = false; fail(err); });
+      };
+      acts.appendChild(fbtn);
+    });
+    var del = el('button', { class: 'ghost', type: 'button', text: 'Remove' });
+    del.onclick = function (ev) { ev.stopPropagation(); api('/api/items/' + i.id, { method: 'DELETE' }).then(load).catch(fail); };
+    acts.appendChild(del);
+    var chips = i.reasons && i.reasons.length ? el('span', { class: 'why' }, i.reasons.map(function (r) { return el('span', { text: pretty(r) }); })) : null;
+    var c = el('div', { class: 'rec' + (hero ? ' hero' : ''), role: 'button', tabindex: '0', 'aria-current': String(state.sel === i.id), style: '--c:var(--c-' + (i.category || 'other') + ')' }, [
+      el('span', { class: 'row1' }, [
+        el('span', { class: 'tag' }, [el('i'), CATS[i.category] || 'Other']),
+        el('span', { class: 'left' + (soon ? ' soon' : ''), text: i.time_left })]),
+      el('span', { class: 'ttl', text: i.title }),
+      i.venue || i.area || i.city ? el('span', { class: 'meta', text: [i.venue, i.area, i.city].filter(Boolean).join(', ') + (i.geo === 'approx' ? ' (approximate pin)' : '') }) : null,
+      meta.length ? el('span', { class: 'meta' }, meta.map(function (m) { return el('span', { text: m }); })) : null,
+      chips, meter(i.reliability, hero), acts]);
+    var pick = function () { state.sel = state.sel === i.id ? null : i.id; renderItems(); focusMarker(); };
+    c.addEventListener('click', pick);
+    c.addEventListener('keydown', function (e) { if (e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(); } });
+    return c;
+  }
+
+  // 'category food' -> 'food', 'word biryani' -> 'biryani', 'price under300' -> 'under Rs 300'
+  function pretty(t) {
+    return String(t).replace(/category /g, '').replace(/word /g, '').replace(/price under(\d+)/g, 'under Rs $1').replace(/price free/g, 'free').replace(/price premium/g, 'premium prices')
+      .replace(/creator /g, 'reels by ').replace(/area /g, 'around ').replace(/found via /g, 'finds via ');
+  }
+  function head(title, sub) { return el('div', {}, [el('h1', { text: title }), sub ? el('p', { class: 'sub', text: sub }) : null]); }
+
+  function renderItems(feedMode) {
     var L = document.getElementById('left'); L.textContent = '';
-    var near = state.view === 'near';
-    L.appendChild(el('div', {}, [
-      el('h1', { text: near ? 'Near you' : 'Everything you saved' }),
-      el('p', { class: 'sub', text: near ? 'Ranked by distance, time left and what you tend to save.' : 'Closest first. Expired offers are hidden.' })]));
+    var v = state.view;
+    var titles = { near: ['Near you', 'Ranked by distance, time left, what you like and how reliable the creator is.'], all: ['Everything you saved', 'Closest first. Expired offers are hidden.'], search: ['Results for "' + state.query + '"', 'Matches words and meaning, one result per venue where possible.'], foryou: ['For you', null] };
+    var t = titles[v] || titles.near;
+    L.appendChild(head(t[0], feedMode ? feedMode.sub : t[1]));
+    if (feedMode && feedMode.learned) L.appendChild(feedMode.learned);
     var f = el('div', { class: 'filters', role: 'group', 'aria-label': 'Category' });
     ['all'].concat(Object.keys(CATS)).forEach(function (k) {
       if (k !== 'all' && !state.items.some(function (i) { return i.category === k; })) return;
       var b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.cat === k), text: k === 'all' ? 'All' : CATS[k] });
-      b.onclick = function () { state.cat = k; renderItems(); }; f.appendChild(b);
+      b.onclick = function () { state.cat = k; renderItems(feedMode); }; f.appendChild(b);
     });
     L.appendChild(f);
-    if (near) {
+    if (v === 'near') {
       var r = el('div', { class: 'filters', role: 'group', 'aria-label': 'Distance' });
       [[1000, '1 km'], [3000, '3 km'], [8000, '8 km']].forEach(function (x) {
         var b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.radius === x[0]), text: x[1] });
@@ -134,52 +215,31 @@
     }
     var items = state.items.filter(function (i) { return state.cat === 'all' || i.category === state.cat; });
     if (!items.length) {
-      L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Nothing here yet' }), el('span', { text: 'Add a video link, a screenshot or some text above. On Android, install the app and use Share to Rilla.' })]));
+      L.appendChild(el('div', { class: 'empty' }, [el('b', { text: v === 'search' ? 'Nothing matches that' : 'Nothing here yet' }), el('span', { text: v === 'search' ? 'Try fewer words, or save the reel you are thinking of.' : 'Paste a video link, a screenshot or some text above. On Android, install the app and use Share to Rila.' })]));
+      demoButtons(L);
     }
     var ul = el('ul', { class: 'list' });
-    items.forEach(function (i) {
-      var soon = i.status === 'ending_soon';
-      var meta = [i.price, i.when, i.distance_m != null ? km(i.distance_m) : null, i.creator ? 'from ' + i.creator : null].filter(Boolean);
-      var acts = el('span', { class: 'actions' });
-      var mapsQ = [i.venue_en || i.venue || i.title, i.area, i.city].filter(Boolean).join(', ');
-      if (i.lat != null || mapsQ) {
-        // an approximate pin is only the middle of the area, so search by name instead
-        var href = (i.geo === 'confirmed' && i.lat != null) ? 'https://www.google.com/maps?q=' + i.lat + ',' + i.lon : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapsQ);
-        acts.appendChild(el('a', { href: href, target: '_blank', rel: 'noopener', text: 'Open in Maps' }));
-      }
-      if (i.source_url) acts.appendChild(el('a', { href: i.source_url, target: '_blank', rel: 'noopener', text: 'Original reel' }));
-      var why = el('button', { class: 'ghost', type: 'button', text: 'Why this?' });
-      why.onclick = function (ev) { ev.stopPropagation(); toggleProof(i, why.closest('.rec')); };
-      acts.appendChild(why);
-      [['Like', 'like', 'Noted'], ['I went', 'visit', 'Marked as visited'], ['Not for me', 'dismiss', 'Hidden']].forEach(function (f) {
-        var fbtn = el('button', { class: 'ghost', type: 'button', text: f[0] });
-        fbtn.onclick = function (ev) {
-          ev.stopPropagation(); fbtn.disabled = true;
-          api('/api/items/' + i.id + '/feedback', { method: 'POST', body: { action: f[1] } }).then(function () {
-            fbtn.textContent = f[2]; if (f[1] !== 'like') setTimeout(load, 400);
-          }).catch(function (err) { fbtn.disabled = false; fail(err); });
-        };
-        acts.appendChild(fbtn);
-      });
-      var del = el('button', { class: 'ghost', type: 'button', text: 'Remove' });
-      del.onclick = function (ev) { ev.stopPropagation(); api('/api/items/' + i.id, { method: 'DELETE' }).then(load).catch(fail); };
-      acts.appendChild(del);
-      var card = el('div', { class: 'rec', role: 'button', tabindex: '0', 'aria-current': String(state.sel === i.id) }, [
-        el('span', { class: 'row1' }, [
-          el('span', { class: 'tag' }, [el('i', { style: 'background:var(--c-' + i.category + ')' }), CATS[i.category] || 'Other']),
-          el('span', { class: 'left' + (soon ? ' soon' : ''), text: i.time_left })]),
-        el('span', { class: 'ttl', text: i.title }),
-        i.venue || i.area || i.city ? el('span', { class: 'meta', text: [i.venue, i.area, i.city].filter(Boolean).join(', ') + (i.geo === 'approx' ? ' (approximate pin)' : '') }) : null,
-        meta.length ? el('span', { class: 'meta', text: meta.join(' · ') }) : null,
-        i.reasons && i.reasons.length ? el('span', { class: 'why', text: i.reasons.join(' · ') }) : null,
-        acts]);
-      var pick = function () { state.sel = state.sel === i.id ? null : i.id; renderItems(); focusMarker(); };
-      card.addEventListener('click', pick);
-      card.addEventListener('keydown', function (e) { if (e.target === card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(); } });
-      ul.appendChild(el('li', {}, [card]));
-    });
+    items.forEach(function (i, n) { ul.appendChild(el('li', {}, [card(i, v === 'foryou' && n === 0)])); });
     L.appendChild(ul);
     drawMap(items);
+  }
+
+  // For you: ranked by the taste model trained on your own likes, visits and hides
+  function loadForYou() {
+    var p = state.loc ? '&lat=' + state.loc.lat + '&lon=' + state.loc.lon : '';
+    api('/api/foryou?limit=12' + p).then(function (d) {
+      state.feed = d; state.items = d.items || [];
+      var learned = null;
+      var lk = (d.learned && d.learned.likes) || [], av = (d.learned && d.learned.avoids) || [];
+      if (!d.cold && (lk.length || av.length)) {
+        learned = el('div', { class: 'chips', 'aria-label': 'What Rila has learned about your taste' },
+          lk.slice(0, 4).map(function (x) { return el('span', { text: 'Likes ' + pretty(x.feature) }); }).concat(av.slice(0, 2).map(function (x) { return el('span', { class: 'no', text: 'Less into ' + pretty(x.feature) }); })));
+      }
+      renderItems({
+        sub: d.cold ? 'Like, visit or hide a few places and this page starts to learn your taste. Until then it ranks by distance and time left.'
+          : 'Ranked by a taste model trained on ' + d.trained_on + ' of your own actions, then mixed so one venue does not crowd the page.',
+        learned: learned });
+    }).catch(fail);
   }
 
   var SRC = { speech: 'spoken in the video', screen: 'shown on screen', caption: 'in the caption', text: 'in the text you pasted', multi: 'across a few lines' };
@@ -193,7 +253,7 @@
       p.appendChild(el('span', {}, ['Found in the video, ' + (SRC[i.evidence_source] || 'in the source') + (i.evidence_at != null ? ' at ' + clock(i.evidence_at) : '') + ':']));
       p.appendChild(el('q', { text: i.evidence }));
     } else {
-      p.appendChild(el('span', { text: 'Rilla did not record an exact quote for this one, so it could not be checked against the video.' }));
+      p.appendChild(el('span', { text: 'Rila did not record an exact quote for this one, so it could not be checked against the video.' }));
     }
     if (i.venue_en && i.venue && i.venue_en !== i.venue) p.appendChild(el('span', { class: 'ctx', text: 'Name as written: ' + i.venue }));
     card.appendChild(p);
@@ -217,13 +277,13 @@
     items.forEach(function (i) {
       if (i.lat == null) return;
       var soon = i.status === 'ending_soon';
-      var col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + i.category).trim() || '#0B7A83';
-      var m = L.circleMarker([i.lat, i.lon], { radius: state.sel === i.id ? 11 : 8, color: soon ? getComputedStyle(document.documentElement).getPropertyValue('--alert').trim() : '#fff', weight: soon ? 3 : 2, fillColor: col, fillOpacity: 0.95 });
+      var col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + i.category).trim() || '#1D3FD1';
+      var m = L.circleMarker([i.lat, i.lon], { radius: state.sel === i.id ? 11 : 8, color: soon ? getComputedStyle(document.documentElement).getPropertyValue('--sun').trim() || '#FFC61A' : '#fff', weight: soon ? 3 : 2, fillColor: col, fillOpacity: 0.95 });
       m.bindPopup(el('div', {}, [el('b', { text: i.title }), el('br'), document.createTextNode(i.time_left)]));
       m.on('click', function () { state.sel = i.id; renderItems(); });
       m.addTo(layer); markers[i.id] = m; pts.push([i.lat, i.lon]);
     });
-    if (state.loc) { L.circleMarker([state.loc.lat, state.loc.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#0B7A83', fillOpacity: 1 }).bindTooltip('You').addTo(layer); pts.push([state.loc.lat, state.loc.lon]); }
+    if (state.loc) { L.circleMarker([state.loc.lat, state.loc.lon], { radius: 7, color: '#fff', weight: 2, fillColor: getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || '#1D3FD1', fillOpacity: 1 }).bindTooltip('You').addTo(layer); pts.push([state.loc.lat, state.loc.lon]); }
     if (pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 16 });
     setTimeout(function () { map.invalidateSize(); }, 50);
     var lg = document.getElementById('legend'); lg.textContent = '';
@@ -231,7 +291,7 @@
       if (!items.some(function (i) { return i.category === k; })) return;
       lg.appendChild(el('span', {}, [el('i', { style: 'background:var(--c-' + k + ')' }), CATS[k]]));
     });
-    lg.appendChild(el('span', { text: 'Red ring = ends within 48 hours' }));
+    lg.appendChild(el('span', { text: 'Yellow ring: ends within 48 hours' }));
   }
   function focusMarker() { var m = markers[state.sel]; if (m && map) { map.panTo(m.getLatLng()); m.openPopup(); } }
 
@@ -249,7 +309,7 @@
   }
   function renderPlaces() {
     var L = document.getElementById('left'); L.textContent = '';
-    L.appendChild(el('div', {}, [el('h1', { text: 'Your places' }), el('p', { class: 'sub', text: 'One card per venue. The more independent reels mention it, the more Rilla trusts it.' })]));
+    L.appendChild(el('div', {}, [el('h1', { text: 'Your places' }), el('p', { class: 'sub', text: 'One card per venue. The more independent reels mention it, the more Rila trusts it.' })]));
     if (!state.places.length) L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'No places yet' }), el('span', { text: 'Save a few reels and the venues they mention will gather here.' })]));
     var ul = el('ul', { class: 'list' });
     state.places.forEach(function (pl) {
@@ -310,33 +370,44 @@
       demoButtons(L);
       drawMap([]); return;
     }
-    L.appendChild(el('p', { class: 'note', text: d.stops.length + ' stops, about ' + Math.round(d.total_minutes) + ' minutes in all (' + Math.round(d.travel_minutes) + ' travelling).' + (d.skipped ? ' ' + d.skipped + ' did not fit.' : '') }));
-    var ol = el('ol', { class: 'list plan' });
+    var spare = Math.max(state.minutes - d.total_minutes, 0), stay = Math.max(d.total_minutes - d.travel_minutes, 0), all = Math.max(state.minutes, d.total_minutes) || 1;
+    L.appendChild(el('div', { class: 'budget' }, [
+      el('p', { class: 'note', text: d.stops.length + ' stops, about ' + Math.round(d.total_minutes) + ' minutes in all (' + Math.round(d.travel_minutes) + ' travelling).' + (d.skipped ? ' ' + d.skipped + ' did not fit.' : '') }),
+      el('div', { class: 'bar3', role: 'img', 'aria-label': Math.round(d.travel_minutes) + ' minutes travelling, ' + Math.round(stay) + ' at stops, ' + Math.round(spare) + ' spare' }, [
+        el('span', { class: 'tv', style: 'width:' + (d.travel_minutes / all * 100) + '%' }), el('span', { class: 'st', style: 'width:' + (stay / all * 100) + '%' })]),
+      el('div', { class: 'key' }, [el('span', {}, [el('i', { style: 'background:var(--sun)' }), 'Getting there']), el('span', {}, [el('i', { style: 'background:var(--blue)' }), 'At the stops']), el('span', { text: Math.round(spare) + ' min spare' })])]));
+    var ol = el('ol', { class: 'line' });
     d.stops.forEach(function (s, n) {
       var acts = el('span', { class: 'actions' }, [el('a', { href: mapsHref(s.venue || s.title, s.area, null, s.lat, s.lon, 'confirmed'), target: '_blank', rel: 'noopener', text: 'Directions' })]);
-      ol.appendChild(el('li', {}, [el('div', { class: 'rec' }, [
-        el('span', { class: 'row1' }, [el('span', { class: 'tag' }, [el('i', { style: 'background:var(--c-' + (s.category || 'other') + ')' }), (n + 1) + '. ' + (CATS[s.category] || 'Other')]),
-          el('span', { class: 'left', text: hm(s.arrive) + ' to ' + hm(s.depart) })]),
-        el('span', { class: 'ttl', text: s.title }),
-        el('span', { class: 'meta', text: [s.venue, s.area].filter(Boolean).join(', ') }),
-        el('span', { class: 'meta', text: (s.travel_min ? Math.round(s.travel_min) + ' min to get there' : 'start here') + (s.wait_min > 1 ? ', wait ' + Math.round(s.wait_min) + ' min for it to open' : '') + ', stay about ' + s.stay_min + ' min' + (s.ends_at ? ', offer ends ' + hm(s.ends_at) : '') }),
-        acts])]));
+      var li = el('li', {}, [
+        el('span', { class: 'when' }, [hm(s.arrive), el('small', { text: 'to ' + hm(s.depart) })]),
+        el('span', { class: 'rail-col' }, [el('span', { class: 'stn', style: '--c:var(--c-' + (s.category || 'other') + ')', 'aria-hidden': 'true' }, [el('b')])]),
+        el('div', { class: 'rec', style: '--c:var(--c-' + (s.category || 'other') + ')' }, [
+          el('span', { class: 'row1' }, [el('span', { class: 'tag' }, [el('i'), (n + 1) + '. ' + (CATS[s.category] || 'Other')]),
+            s.ends_at ? el('span', { class: 'left soon', text: 'offer ends ' + hm(s.ends_at) }) : null]),
+          el('span', { class: 'ttl', text: s.title }),
+          el('span', { class: 'meta', text: [s.venue, s.area].filter(Boolean).join(', ') }),
+          el('span', { class: 'meta', text: (s.wait_min > 1 ? 'Wait ' + Math.round(s.wait_min) + ' min for it to open, ' : '') + 'stay about ' + s.stay_min + ' min' }),
+          acts])]);
+      if (n > 0 || s.travel_min) ol.appendChild(el('li', { 'aria-hidden': 'true' }, [el('span'), el('span', { class: 'rail-col' }), el('span', { class: 'leg', text: s.travel_min ? Math.round(s.travel_min) + ' min to get there' : 'Start here' })]));
+      ol.appendChild(li);
     });
     L.appendChild(ol);
     drawMap(d.stops.map(function (s) { return { id: s.id, title: (s.title), category: s.category || 'other', status: 'active', time_left: hm(s.arrive), lat: s.lat, lon: s.lon }; }));
   }
 
-  // You: what Rilla has learned, in the open
+  // You: what Rila has learned, in the open
   function renderYou() {
     var L = document.getElementById('left'); L.textContent = '';
     document.getElementById('mapcard').hidden = true;
     demoButtons(L);
-    L.appendChild(el('div', {}, [el('h1', { text: 'What Rilla has learned' }), el('p', { class: 'sub', text: 'From what you save, like, visit and hide. Nothing is hidden from you, and it never leaves your account.' })]));
-    Promise.all([api('/api/me/interests'), api('/api/creators')]).then(function (r) {
+    L.appendChild(el('div', {}, [el('h1', { text: 'What Rila has learned' }), el('p', { class: 'sub', text: 'From what you save, like, visit and hide. Nothing is hidden from you, and it never leaves your account.' })]));
+    Promise.all([api('/api/me/interests'), api('/api/creators'), api('/api/foryou?limit=1').catch(function () { return {}; })]).then(function (r) {
       var rows = r[0].interests.filter(function (x) { return x.evidence > 0 || x.saved > 0; });
       if (!rows.length) L.appendChild(el('div', { class: 'empty' }, [el('b', { text: 'Not enough yet' }), el('span', { text: 'Like, visit or hide a few places and your tastes show up here.' })]));
       else {
         L.appendChild(el('h2', { class: 'h2', text: 'Your interests' }));
+        if (rows.length >= 3) L.appendChild(radar(rows));
         var ul = el('ul', { class: 'list' });
         rows.forEach(function (x) {
           ul.appendChild(el('li', {}, [el('div', { class: 'bars' }, [
@@ -345,6 +416,12 @@
             el('span', { class: 'bv', text: Math.round(x.interest * 100) + '%' })])]));
         });
         L.appendChild(ul);
+      }
+      var tf = (r[2] && r[2].learned) || {};
+      if ((tf.likes && tf.likes.length) || (tf.avoids && tf.avoids.length)) {
+        L.appendChild(el('h2', { class: 'h2', text: 'What your taste model picked up' }));
+        L.appendChild(el('div', { class: 'chips' }, (tf.likes || []).slice(0, 6).map(function (x) { return el('span', { text: pretty(x.feature) }); }).concat((tf.avoids || []).slice(0, 4).map(function (x) { return el('span', { class: 'no', text: 'less ' + pretty(x.feature) }); }))));
+        L.appendChild(el('p', { class: 'note', text: 'Learned from ' + r[2].trained_on + ' of your actions. It is retrained each time you open this page and is never stored.' }));
       }
       var cs = r[1].creators;
       if (cs.length) {
@@ -359,6 +436,77 @@
       }
     }).catch(fail);
   }
+
+  // a radar of category interests: the shape is how much of each you like
+  function radar(rows) {
+    var NS = 'http://www.w3.org/2000/svg', n = rows.length, cx = 150, cy = 140, R = 92;
+    function ns(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+    var svg = ns('svg', { viewBox: '-30 0 360 280', class: 'radar', role: 'img', 'aria-label': 'Interest by category: ' + rows.map(function (x) { return (CATS[x.category] || x.category) + ' ' + Math.round(x.interest * 100) + '%'; }).join(', ') });
+    function pt(k, f) { var a = -Math.PI / 2 + 2 * Math.PI * k / n; return [cx + Math.cos(a) * R * f, cy + Math.sin(a) * R * f]; }
+    [0.33, 0.66, 1].forEach(function (f) { svg.appendChild(ns('polygon', { class: 'ring', points: rows.map(function (_, k) { return pt(k, f).join(','); }).join(' ') })); });
+    rows.forEach(function (x, k) {
+      var p = pt(k, 1), q = pt(k, 1.2);
+      svg.appendChild(ns('line', { class: 'spoke', x1: cx, y1: cy, x2: p[0], y2: p[1] }));
+      var t = ns('text', { x: q[0], y: q[1] + 4, 'text-anchor': Math.abs(q[0] - cx) < 6 ? 'middle' : q[0] > cx ? 'start' : 'end' }); t.textContent = CATS[x.category] || x.category; svg.appendChild(t);
+    });
+    svg.appendChild(ns('polygon', { class: 'shape', points: rows.map(function (x, k) { return pt(k, Math.max(x.interest, 0.04)).join(','); }).join(' ') }));
+    rows.forEach(function (x, k) { var p = pt(k, Math.max(x.interest, 0.04)); svg.appendChild(ns('circle', { class: 'dot', cx: p[0], cy: p[1], r: 5 })); });
+    return svg;
+  }
+
+  // search palette: press / or Ctrl+K, type, pick
+  var palTimer = null, palSeq = 0;
+  function openPalette() {
+    var p = document.getElementById('palette'); p.hidden = false;
+    var q = document.getElementById('palq'); q.value = ''; document.getElementById('pallist').textContent = ''; q.focus();
+  }
+  function closePalette() { document.getElementById('palette').hidden = true; }
+  function runSearch(text) {
+    var list = document.getElementById('pallist'), mine = ++palSeq;
+    if (text.trim().length < 2) { list.textContent = ''; return; }
+    var p = state.loc ? '&lat=' + state.loc.lat + '&lon=' + state.loc.lon : '';
+    api('/api/search?q=' + encodeURIComponent(text.trim()) + '&limit=8' + p).then(function (d) {
+      if (mine !== palSeq) return;
+      list.textContent = '';
+      var items = d.items || [];
+      if (!items.length) { list.appendChild(el('li', {}, [el('span', { class: 'note', text: 'Nothing matches "' + text.trim() + '". Try fewer words.' })])); return; }
+      items.forEach(function (i, n) {
+        var b = el('button', { class: 'pal-item', type: 'button', 'aria-selected': String(n === 0) }, [el('b', { text: i.title }),
+          el('span', { text: [CATS[i.category] || 'Other', i.venue, i.area, (i.reasons || []).join(', '), i.reliability ? LEVEL[i.reliability.label] + ' reliability' : null].filter(Boolean).join(', ') })]);
+        b.onclick = function () { state.query = text.trim(); state.view = 'search'; state.items = items; state.cat = 'all'; state.sel = i.id; closePalette(); renderTabs(); renderItems(); focusMarker(); };
+        list.appendChild(el('li', {}, [b]));
+      });
+    }).catch(function (e) { if (mine === palSeq) { list.textContent = ''; list.appendChild(el('li', {}, [el('span', { class: 'note', text: e.message })])); } });
+  }
+  (function palette() {
+    var q = document.getElementById('palq'); if (!q) return;
+    q.addEventListener('input', function () { clearTimeout(palTimer); palTimer = setTimeout(function () { runSearch(q.value); }, 220); });
+    q.addEventListener('keydown', function (e) {
+      var btns = Array.prototype.slice.call(document.querySelectorAll('#pallist .pal-item')); if (!btns.length) return;
+      var cur = btns.findIndex(function (b) { return b.getAttribute('aria-selected') === 'true'; });
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); var nx = (cur + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length; btns.forEach(function (b, k) { b.setAttribute('aria-selected', String(k === nx)); }); btns[nx].scrollIntoView({ block: 'nearest' }); }
+      if (e.key === 'Enter') { e.preventDefault(); (btns[cur] || btns[0]).click(); }
+    });
+    document.getElementById('palette').addEventListener('click', function (e) { if (e.target === this) closePalette(); });
+    document.getElementById('searchbtn').onclick = openPalette;
+    document.addEventListener('keydown', function (e) {
+      var typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '');
+      if (e.key === 'Escape') closePalette();
+      else if ((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); openPalette(); }
+    });
+  })();
+
+  // theme: follows the device until you choose
+  (function theme() {
+    var root = document.documentElement, b = document.getElementById('themebtn');
+    try { var t = localStorage.getItem('rilla_theme'); if (t) root.setAttribute('data-theme', t); } catch (e) {}
+    if (b) b.onclick = function () {
+      var dark = root.getAttribute('data-theme') === 'dark' || (!root.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      var next = dark ? 'light' : 'dark'; root.setAttribute('data-theme', next);
+      try { localStorage.setItem('rilla_theme', next); } catch (e) {}
+      if (state.items && map) load();
+    };
+  })();
 
   function renderLive() {
     var L = document.getElementById('left'); L.textContent = '';
@@ -418,7 +566,7 @@
       if (items[k].kind === 'file' && /^image\//.test(items[k].type)) { var f = items[k].getAsFile(); if (f) { e.preventDefault(); submitFile(f); return; } }
     }
   });
-  // "Share to Rilla" from another app's share sheet (installed PWA on Android Chrome)
+  // "Share to Rila" from another app's share sheet (installed PWA on Android Chrome)
   function handleShare(sh) {
     var m = (sh.url || sh.text || '').match(/https?:\/\/[^\s]+/);
     if (m) submitLink(m[0]); else if ((sh.text || '').length >= 10) submitText(sh.text);
@@ -439,10 +587,10 @@
 
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
 
-  if (!token) { showGate('Rilla turns the videos you watch into places and offers on your own map.'); return; }
+  if (!token) { showGate('Rila turns the videos you watch into places and offers on your own map.'); return; }
   api('/api/me').then(function (me) {
     if (me.location) state.loc = me.location;
-    state.view = state.loc ? 'near' : 'all';
+    state.view = 'foryou';
     load();
     var pending = share;
     try { var stored = sessionStorage.getItem('rilla_share'); if (!pending && stored) pending = JSON.parse(stored); sessionStorage.removeItem('rilla_share'); } catch (e) {}

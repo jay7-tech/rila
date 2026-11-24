@@ -1,5 +1,5 @@
 @echo off
-REM Run Rilla on this laptop without Docker (uses a local SQLite database).
+REM Run Rila on this laptop without Docker (uses a local SQLite database).
 cd /d "%~dp0.."
 if not exist .env (
   copy .env.example .env >nul
